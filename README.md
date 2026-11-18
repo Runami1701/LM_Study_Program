@@ -16,23 +16,20 @@ The course has two halves:
 Everything runs on the CPU and works offline once the data is downloaded.
 Windows, Linux and macOS all work the same way.
 
-## Setup
+## Start the course
 
-Python 3.10 or newer. From this folder:
+Double-click **`start_course.bat`** (Windows) or run **`./start_course.sh`** (Linux/macOS).
 
-```bash
-pip install -e .
-```
+The first start installs the course and its packages and downloads the training
+text, which needs an internet connection and takes a minute or two. Every start
+then opens the course in your browser at http://localhost:8000. Keep the window
+open while you study; close it to stop.
 
-```bash
-python -m course data
-```
+You need Python 3.10 or newer (https://www.python.org/downloads/). Start with
+lesson **n-l01**.
 
-```bash
-python -m course serve
-```
-
-The last command opens the course at http://localhost:8000. Start with **s0-l00**.
+To do the same by hand: `pip install -e .`, then `python -m course data`, then
+`python -m course serve`.
 
 ## How to take a lesson
 
@@ -61,6 +58,7 @@ The last command opens the course at http://localhost:8000. Start with **s0-l00*
 | `python -m course progress` | lessons passed, hints used, solutions opened early |
 | `python -m course reset <id>` | restore that lesson's stub functions (asks first; other code is kept) |
 | `python -m course data` | download the datasets into `data/` |
+| `python -m course sync` | add new lesson stubs to `workspace/` after you pull an update (your code is kept) |
 | `python -m course build` | rebuild the site |
 
 ## Layout
