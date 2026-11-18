@@ -81,11 +81,11 @@ $$
 \text{effective FLOPS} = 6 N \times \text{tokens per second}
 $$
 
-On the reference machine the Stage 3 model trained at **S3_TOKS** tokens per second, which is **EFF_GFLOPS** GFLOPS effective, about EFF_PCT of the matrix-product speed.
+Measure this on your own machine before the long run (see Break it). As a rough guide: the Stage 2 model, with $N \approx 0.8$ M, trained at about 5,000 characters per second on the 4-core reference CPU, which is $6 \times 0.8\text{M} \times 5000 \approx 24$ GFLOPS effective: about 5% of that machine's 450 GFLOPS matrix-product speed. Small matrices and Python overhead cost a lot; the larger Stage 3 matrices usually reach a higher fraction.
 
 ### How many tokens?
 
-Research on language models (the "Chinchilla" study) found that for a fixed compute budget, a model learns best from about **20 tokens per parameter**. For $N = 5.8$ M that is $D \approx 116$ M tokens, which would take about **CHIN_HOURS** hours here. Too long for one night.
+Research on language models (the "Chinchilla" study) found that for a fixed compute budget, a model learns best from about **20 tokens per parameter**. For $N = 5.8$ M that is $D \approx 116$ M tokens. At 50 GFLOPS effective, that takes $\frac{6 \times 5.8\text{M} \times 116\text{M}}{50 \times 10^9 \times 3600} \approx 22$ hours: too long for one night.
 
 So we choose the other way round: fix the time, and derive $D$:
 
@@ -93,7 +93,7 @@ $$
 D = \frac{\text{hours} \cdot 3600 \cdot \text{FLOPS}}{6N}
 $$
 
-The default config trains for 6,000 steps of $16 \times 256 = 4{,}096$ tokens: $D = 24.6$ M tokens, about 4 tokens per parameter, and about **RUN_HOURS** hours at the reference speed. Our tokenized data has 26.6 M tokens, so the run sees almost every story once. A smaller model ($d = 192$) would get more tokens per parameter in the same time; a larger one would get fewer. Both are reasonable experiments after the boss.
+The default config trains for 6,000 steps of $16 \times 256 = 4{,}096$ tokens: $D = 24.6$ M tokens, about 4 tokens per parameter. At 50 GFLOPS effective that is about 4.8 hours; compute your own estimate with `estimate_hours` and your measured speed, and change `max_steps` to fit your night. Our tokenized data has 26.6 M tokens, so the run sees almost every story once. A smaller model ($d = 192$) would get more tokens per parameter in the same time; a larger one would get fewer. Both are reasonable experiments after the boss.
 
 ### Running it overnight
 

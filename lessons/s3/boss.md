@@ -9,13 +9,13 @@ est_minutes: 480
 boss:
   results: runs/s3/results.json
   metric: val_bpc
-  threshold: S3_THRESHOLD
+  threshold: 1.5
   ask: "Read the sample above. Is it a coherent short story (sentences that make sense together)?"
   run: python -m workspace.stage3.train_bpe_lm
 ---
 
 ::: goal
-You will train the subword transformer on TinyStories, overnight, until it writes coherent short stories and scores at most **S3_THRESHOLD** bits per character on held-out stories.
+You will train the subword transformer on TinyStories, overnight, until it writes coherent short stories and scores at most **1.5** bits per character on held-out stories.
 :::
 
 ::: concept
@@ -25,15 +25,11 @@ You will train the subword transformer on TinyStories, overnight, until it write
 2. `python -m workspace.stage3.train_bpe_lm` learns the BPE merges, tokenizes the data (a few minutes, once), and trains. It saves a checkpoint every 500 steps; with `CONFIG["resume"] = True` it continues after an interruption.
 3. When it finishes, run `python -m course check s3-boss` in a terminal. The check reads `runs/s3/results.json`, compares `val_bpc` with the target, prints the sample story, and asks you to judge it. (The **Run check** button shows the same numbers, but you answer the question in the terminal.)
 
-### The reference
+### The target is an estimate
 
-The reference machine could not run a whole night inside this course's build, so the reference is a **shorter run**: S3_STEPS steps (S3_TOKENS tokens) in S3_HOURS hours, at about S3_TOKS tokens per second. It reached **S3_REF bits per character** on 300,000 held-out characters. The target, S3_THRESHOLD, is set at this short run's result; the full 6,000-step default run should beat it clearly.
+The other bosses were calibrated with a reference run on the course's build machine. This one could not be: a full Stage 3 run takes a night, and that machine could not stay up that long. So the target, **1.5 bits per character**, is an estimate. It is loose on purpose, well below the 8 bits of a uniform byte model and the roughly 2.3 bits of Stage 2's character model on Shakespeare. A model that writes readable stories should beat it.
 
-The short run's sample, at temperature 0.8:
-
-S3_SAMPLE
-
-Your full run should read more like a story: names that stay the same, sentences that follow from each other, and a simple ending.
+After your run, look at your own number and your sample. If your model clearly writes stories but misses 1.5, the estimate was too strict: change `threshold` in this lesson's front matter (`lessons/s3/boss.md`) to your result plus 0.05, and note what you changed. If it beats 1.5 easily, try lowering the target to your result plus 0.05 and train a second, better run.
 
 ### If you are above the target
 
