@@ -2,6 +2,8 @@
 
 Lesson s1-l02: embedding_forward, flatten_context   ->  python -m course check s1-l02
 Lesson s1-l03: linear_forward, tanh_forward          ->  python -m course check s1-l03
+Lesson s1-l06: linear_backward, tanh_backward        ->  python -m course check s1-l06
+Lesson s1-l07: embedding_backward                    ->  python -m course check s1-l07
 
 Conventions: row vectors (x @ W), float32 model math, no Python loops over the batch.
 """
@@ -60,3 +62,45 @@ def tanh_forward(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         cache: the array `out` itself (the backward pass in s1-l06 needs only it).
     """
     raise NotImplementedError("tanh_forward")
+
+
+def linear_backward(dout: np.ndarray, cache: tuple) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Backward pass of out = x @ W + b.
+
+    Args:
+        dout:  (B, m) gradient of the loss with respect to out.
+        cache: (x, W, b) from linear_forward.
+
+    Returns:
+        dx: (B, n), dW: (n, m), db: (m,) — each the same shape as what it is the gradient of.
+    """
+    raise NotImplementedError("linear_backward")
+
+
+def tanh_backward(dout: np.ndarray, cache: np.ndarray) -> np.ndarray:
+    """Backward pass of out = tanh(x).
+
+    Args:
+        dout:  gradient with respect to out (any shape).
+        cache: the output of tanh_forward (same shape).
+
+    Returns:
+        dx, same shape as dout.
+    """
+    raise NotImplementedError("tanh_backward")
+
+
+def embedding_backward(demb: np.ndarray, x: np.ndarray, V: int) -> np.ndarray:
+    """Backward pass of emb = C[x].
+
+    Args:
+        demb: (B, k, e) gradient with respect to emb.
+        x:    (B, k) the ids that were looked up.
+        V:    vocabulary size (number of rows of C).
+
+    Returns:
+        dC: (V, e), same dtype as demb. Row i is the sum of demb over every
+        position where x == i (zero for ids that never appear). Repeated ids
+        must accumulate.
+    """
+    raise NotImplementedError("embedding_backward")

@@ -24,3 +24,24 @@ def tanh_forward(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """out = tanh(x); cache = out (since d tanh/dx = 1 - tanh²)."""
     out = np.tanh(x)
     return out, out
+
+
+def linear_backward(dout: np.ndarray, cache: tuple) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Gradients of out = x @ W + b: (dx, dW, db)."""
+    x, W, b = cache
+    dx = dout @ W.T          # (B, m) @ (m, n) -> (B, n)
+    dW = x.T @ dout          # (n, B) @ (B, m) -> (n, m)
+    db = dout.sum(axis=0)    # b was broadcast over the B rows -> sum them back
+    return dx, dW, db
+
+
+def tanh_backward(dout: np.ndarray, cache: np.ndarray) -> np.ndarray:
+    """d tanh(a)/da = 1 - tanh(a)^2, and cache holds tanh(a)."""
+    return dout * (1.0 - cache * cache)
+
+
+def embedding_backward(demb: np.ndarray, x: np.ndarray, V: int) -> np.ndarray:
+    """Scatter-add (B, k, e) gradients into the rows of a (V, e) table."""
+    dC = np.zeros((V, demb.shape[-1]), dtype=demb.dtype)
+    np.add.at(dC, x, demb)   # unbuffered: repeated ids accumulate
+    return dC
