@@ -223,6 +223,10 @@ pre code.language-pseudo { color: var(--text); }
 .cmd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .cmd code { font-size: 15px; padding: 8px 12px; }
 .check-status { font-family: var(--font-ui); font-size: 15px; padding: 12px 14px; border-radius: 8px; background: var(--bg-sunk); border: 1px solid var(--border); }
+.run-row { margin-bottom: 12px; }
+.small-note { font-family: var(--font-ui); font-size: 13px; }
+.check-output { font-size: 13.5px; white-space: pre-wrap; border-left: 3px solid var(--danger); }
+.check-output.passed { border-left-color: var(--ok); }
 .check-status.passed { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
 
 .locked { border: 1px dashed var(--border-strong); border-radius: 10px; padding: 18px; font-family: var(--font-ui); font-size: 15px; }

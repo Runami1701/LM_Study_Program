@@ -29,13 +29,11 @@ You will make NumPy arrays, read their shape and number type, and see the differ
 ::: concept
 ### Before you start
 
-Run these three commands once, in the repository folder:
+Start the course by double-clicking `start_course.bat` (Windows) or running `./start_course.sh` (Linux/macOS). The first start installs everything; later starts just open this website.
 
-1. `pip install -e .` installs the course tools.
-2. `python -m course data` downloads the text we train on.
-3. `python -m course serve` opens this website.
+Each lesson has a **Run check** button in its Check section. Press it after you write your code: it tests your functions and shows what is right and what is wrong. The same check also runs from a terminal with `python -m course check <lesson>`.
 
-To try the examples below, open a Python shell (type `python`) and run `import numpy as np` first. Every example uses the name `np` for NumPy.
+To try the examples below, open a Python shell (type `python` in a terminal) and run `import numpy as np` first. Every example uses the name `np` for NumPy.
 
 ### An array is a grid of numbers
 

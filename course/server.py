@@ -10,6 +10,9 @@ Everything else is served as static files from the repository root.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 import threading
 import webbrowser
 from functools import partial
@@ -17,7 +20,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 from . import progress
-from .registry import ROOT
+from .registry import ROOT, load_lessons
 
 SITE_PATH = "/site/build/index.html"
 _lock = threading.Lock()
@@ -53,7 +56,32 @@ class CourseHandler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def _run_check(self):
+        """POST /api/check {"lesson": id}: run `python -m course check <id>` and return its output."""
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            lesson = str(json.loads(self.rfile.read(length) or b"{}").get("lesson", ""))
+        except (ValueError, json.JSONDecodeError):
+            lesson = ""
+        if lesson not in {l.id for l in load_lessons()}:
+            self._send_json({"error": f"unknown lesson {lesson!r}"}, HTTPStatus.BAD_REQUEST)
+            return
+        env = dict(os.environ, NO_COLOR="1", PYTHONIOENCODING="utf-8")
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "course", "check", lesson],
+                cwd=ROOT, env=env, capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=900, stdin=subprocess.DEVNULL,
+            )
+            output, ok = (proc.stdout + proc.stderr).strip(), proc.returncode == 0
+        except subprocess.TimeoutExpired:
+            output, ok = "The check took longer than 15 minutes and was stopped.", False
+        self._send_json({"ok": ok, "output": output})
+
     def do_POST(self):
+        if self.path.split("?", 1)[0] == "/api/check":
+            self._run_check()
+            return
         if self.path.split("?", 1)[0] != "/api/event":
             self.send_error(HTTPStatus.NOT_FOUND)
             return

@@ -240,6 +240,9 @@
       h += section(
         "check",
         "Check",
+        (SERVED ? `<div class="row run-row"><button class="btn primary" type="button" data-act="run-check">Run check</button>
+           <span class="muted small-note">Checks your code in <code>${esc(L.files.join(", "))}</code>.</span></div>
+           <pre id="check-output" class="check-output" hidden></pre>` : "") +
         `<div class="cmd"><code>${esc(cmd)}</code>
            <button class="btn small" type="button" data-act="copy" data-text="${esc(cmd)}">Copy</button></div>
          <div id="check-status" class="check-status" aria-live="polite"></div>`
@@ -404,6 +407,24 @@
       } else {
         fallbackCopy(text, done);
       }
+    } else if (act === "run-check") {
+      const out = $("#check-output");
+      btn.disabled = true;
+      btn.textContent = "Checking…";
+      out.hidden = false;
+      out.textContent = "Running the checks for " + id + " …";
+      fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson: id }) })
+        .then((r) => r.json())
+        .then((d) => {
+          out.textContent = d.output || d.error || "(no output)";
+          out.classList.toggle("passed", !!d.ok);
+        })
+        .catch(() => (out.textContent = "Could not reach the course server. Is the start window still open?"))
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = "Run check";
+          poll();
+        });
     } else if (act === "force-ask") {
       $("#force-confirm").hidden = false;
       btn.hidden = true;
