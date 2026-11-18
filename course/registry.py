@@ -21,6 +21,7 @@ LESSONS_DIR = ROOT / "lessons"
 # Stage order and display names. A stage with no lesson files yet is simply
 # not shown.
 STAGES: list[tuple[str, str]] = [
+    ("n", "NumPy basics"),
     ("s0", "Stage 0 · Setup"),
     ("s1", "Stage 1 · MLP character model"),
     ("a", "Interlude A · Autograd engine"),
