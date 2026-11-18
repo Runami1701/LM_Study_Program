@@ -1,0 +1,19 @@
+# learner state
+progress.json
+progress.json.tmp
+
+# downloaded data and training outputs
+data/
+runs/
+
+# generated site (rebuilt by `python -m course serve`)
+site/build/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/

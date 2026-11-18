@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "numpy-lm-course"
+version = "0.1.0"
+description = "An interactive course: build a language model from scratch in pure NumPy."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "pytest>=7",
+    "markdown>=3.4",
+    "pyyaml>=6",
+    "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+notebooks = ["jupyter"]
+
+[project.scripts]
+course = "course.__main__:main"
+
+[tool.setuptools]
+packages = ["course"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-p no:cacheprovider"
+markers = [
+    "fn(name): the learner function this test exercises (used for friendly output)",
+    "slow: timing tests with generous bounds",
+]
