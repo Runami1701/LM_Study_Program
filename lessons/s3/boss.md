@@ -27,7 +27,7 @@ You will train the subword transformer on TinyStories, overnight, until it write
 
 ### The target is an estimate
 
-The other bosses were calibrated with a reference run on the course's build machine. This one could not be: a full Stage 3 run takes a night, and that machine could not stay up that long. So the target, **1.5 bits per character**, is an estimate. It is loose on purpose, well below the 8 bits of a uniform byte model and the roughly 2.3 bits of Stage 2's character model on Shakespeare. A model that writes readable stories should beat it.
+The other bosses were calibrated with a reference run on the course's build machine. This one could not be: a full Stage 3 run takes a night, and that machine could not stay up that long. So the target, **1.5 bits per character**, is an estimate. It is loose on purpose, well below the 8 bits of a uniform byte model and the 2.43 bits of Stage 1's character model on Shakespeare. A model that writes readable stories should beat it.
 
 After your run, look at your own number and your sample. If your model clearly writes stories but misses 1.5, the estimate was too strict: change `threshold` in this lesson's front matter (`lessons/s3/boss.md`) to your result plus 0.05, and note what you changed. If it beats 1.5 easily, try lowering the target to your result plus 0.05 and train a second, better run.
 

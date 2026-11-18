@@ -9,13 +9,13 @@ est_minutes: 120
 boss:
   results: runs/s2/results.json
   metric: val_loss
-  threshold: S2_THRESHOLD
+  threshold: 1.60
   must_beat: runs/s1/results.json
   run: python -m workspace.stage2.train_tf
 ---
 
 ::: goal
-You will train your own transformer on Tiny Shakespeare until its validation loss is at most **S2_THRESHOLD** and lower than your Stage 1 model's, using only the code you wrote.
+You will train your own transformer on Tiny Shakespeare until its validation loss is at most **1.60** and lower than your Stage 1 model's, using only the code you wrote.
 :::
 
 ::: concept
@@ -26,13 +26,25 @@ You will train your own transformer on Tiny Shakespeare until its validation los
 
 If the run is interrupted, set `CONFIG["resume"] = True` and start it again: it continues from the last checkpoint.
 
-### The reference
+### The reference, and an estimated target
 
-The reference solution, with the default config (5,000 steps, batches of $32 \times 128$ characters), reached validation loss **S2_REF** (S2_BPC bits per character) in **S2_MIN** minutes on a 4-core cloud CPU, at about S2_TOKS characters per second. Stage 1 reached 1.682. The target, S2_THRESHOLD, leaves room for a different machine and seed.
+The reference run was stopped early, at step 1,500 of 5,000, when the course's build machine had to shut down. At that point its validation loss was **1.72** (2.48 bits per character), still falling by about 0.03 every 250 steps, at about 4,000 to 5,000 characters per second on a 4-core cloud CPU. Stage 1 finished at 1.682.
 
-The reference sample:
+So the target, **1.60**, is an estimate: a full 5,000-step run with the learning rate decaying to its minimum should end clearly below it. If your full run writes good text but ends between 1.60 and 1.68, the estimate was too strict: change `threshold` in this lesson's front matter (`lessons/s2/boss.md`) to your result plus 0.05.
 
-S2_SAMPLE
+The reference sample at step 1,500 (temperature 0.8). A finished run should look more like Shakespeare than this:
+
+> That with tale's man bloody; pray, forth!
+> Commandopatan: that John willing just,
+> Now thy susbews with to my broar power his feel,
+> Or pensive to my soul and were insteed?
+> 
+> YORK:
+> Your broody.
+> 
+> KING EDWARD IV:
+> And id, housemaberd, sir, the sit would unto
+> you their shall day; structs to the's garling;
 
 ### If you are above the target
 
