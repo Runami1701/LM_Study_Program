@@ -192,6 +192,8 @@ def lint_lesson(path: Path, rep: Report, formulas: list[dict]) -> None:
             bad = [l for l in opening_langs if l != "pseudo"]
             if bad:
                 rep.error(where, "code fences in hint 3 must be marked ```pseudo (pseudocode, never real code)")
+        elif b.name == "numpy" and set(opening_langs) <= {"python"}:
+            pass  # the "NumPy you need here" box teaches with small runnable examples
         elif meta.get("allow_examples") and b.name in ("concept", "breakit") and set(opening_langs) <= {"python"}:
             pass  # NumPy-basics lessons teach with small runnable ```python examples
         elif opening_langs:

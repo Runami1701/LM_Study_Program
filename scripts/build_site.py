@@ -109,6 +109,7 @@ def lesson_payload(lesson) -> dict:
         "has_check": bool(lesson.tests),
         "goal": one("goal"),
         "notation": one("notation"),
+        "numpy": one("numpy"),
         "concept": one("concept"),
         "think": thinks,
         "hints": [md_to_html(h.body) for h in hints],

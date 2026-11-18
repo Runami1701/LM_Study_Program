@@ -190,6 +190,7 @@
 
     h += section("goal", "Goal", L.goal ? `<div class="goal-box">${L.goal}</div>` : "");
     h += section("notation", "Notation", L.notation);
+    h += section("numpy", "Code you need here", L.numpy ? `<div class="numpy-box">${L.numpy}</div>` : "");
     h += section("concept", "Concept", L.concept);
 
     if (L.think.length) {

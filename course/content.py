@@ -15,7 +15,7 @@ from pathlib import Path
 from .registry import ROOT, split_front_matter
 
 SECTION_NAMES = (
-    "goal", "notation", "concept", "think", "hint", "attempt",
+    "goal", "notation", "numpy", "concept", "think", "hint", "attempt",
     "solution", "breakit", "recap",
 )
 
