@@ -170,8 +170,8 @@ sum(a, axis, keepdims):
 :::
 
 ::: attempt
-Files: `workspace/autograd/tensor.py` — fill in `unbroadcast` and use it in `__add__` and `__mul__`; `workspace/autograd/ops.py` — fill in every operation.
-Check: `python -m course check a-l02`
+The editor below has a tab for each file. In `workspace/autograd/tensor.py`: fill in `unbroadcast` and use it in `__add__` and `__mul__`; in `workspace/autograd/ops.py`, fill in every operation.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

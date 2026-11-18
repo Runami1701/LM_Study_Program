@@ -160,8 +160,8 @@ zero_grad(): grad ← zeros like data
 :::
 
 ::: attempt
-File: `workspace/autograd/tensor.py` — fill in `Tensor.__init__`, `__add__`, `__mul__` and `zero_grad`.
-Check: `python -m course check a-l01`
+The editor below opens `workspace/autograd/tensor.py`: fill in `Tensor.__init__`, `__add__`, `__mul__` and `zero_grad`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

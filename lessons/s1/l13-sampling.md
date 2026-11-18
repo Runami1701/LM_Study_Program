@@ -8,6 +8,7 @@ files: [workspace/stage1/sample.py]
 functions: [sample_next, sample]
 tests: tests/s1/test_l13_sample.py
 est_minutes: 40
+jobs: [sample-s1]
 ---
 
 ::: goal
@@ -155,9 +156,9 @@ sample(params, itos, stoi, prompt, n, τ, rng):
 :::
 
 ::: attempt
-File: `workspace/stage1/sample.py` — fill in `sample_next` and `sample`.
-Check: `python -m course check s1-l13`
-After your s1-l12 training run, try it: `python -m workspace.stage1.sample 0.8` prints 500 characters at temperature 0.8 from `runs/s1/params.npz`.
+The editor below opens `workspace/stage1/sample.py`: fill in `sample_next` and `sample`.
+Check: press **Run check** in the Check section below.
+After your s1-l12 training run, press **Write text with the Stage 1 model** in the Run section below: it prints 500 characters at temperature 0.8 from `runs/s1/params.npz`.
 :::
 
 ::: solution
@@ -174,7 +175,7 @@ After your s1-l12 training run, try it: `python -m workspace.stage1.sample 0.8` 
 :::
 
 ::: breakit
-Run `python -m workspace.stage1.sample 0.3`, then `1.0`, then `2.0` (the same seed each time). At 0.3 the same common words and names come back in loops. At 1.0 you get lines shaped like Shakespeare, with plausible names, colons and line breaks, but many invented words. At 2.0 you get almost random letters and punctuation.
+Change the temperature in `main()` at the bottom of `workspace/stage1/sample.py` (the editor above), save, and press **Write text with the Stage 1 model**: try 0.3, then 1.0, then 2.0 (the same seed each time). At 0.3 the same common words and names come back in loops. At 1.0 you get lines shaped like Shakespeare, with plausible names, colons and line breaks, but many invented words. At 2.0 you get almost random letters and punctuation.
 :::
 
 ::: recap

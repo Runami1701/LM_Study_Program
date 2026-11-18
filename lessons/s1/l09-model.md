@@ -166,8 +166,8 @@ backward(cache):
 :::
 
 ::: attempt
-File: `workspace/stage1/model.py` — fill in `init_params`, `predict`, `forward`, `backward` and `count_params`.
-Check: `python -m course check s1-l09`
+The editor below opens `workspace/stage1/model.py`: fill in `init_params`, `predict`, `forward`, `backward` and `count_params`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

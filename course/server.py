@@ -49,6 +49,18 @@ class CourseHandler(SimpleHTTPRequestHandler):
             self.send_header("Location", SITE_PATH)
             self.end_headers()
             return
+        if path == "/api/file":
+            self._get_file()
+            return
+        if path == "/api/job":
+            from urllib.parse import parse_qs, urlparse
+            from . import jobs
+            kind = (parse_qs(urlparse(self.path).query).get("kind") or [""])[0]
+            if kind not in jobs.JOBS:
+                self._send_json({"error": "unknown task"}, HTTPStatus.BAD_REQUEST)
+            else:
+                self._send_json(jobs.status(kind))
+            return
         if path == "/api/tutor/status":
             from . import tutor
             self._send_json(tutor.status())
@@ -81,13 +93,72 @@ class CourseHandler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def _body(self, limit: int = 2_000_000) -> dict:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length > limit:
+            raise ValueError("request too large")
+        return json.loads(self.rfile.read(length) or b"{}")
+
+    @staticmethod
+    def _workspace_path(rel: str):
+        """Only existing .py files inside workspace/ may be read or written."""
+        path = (ROOT / rel).resolve()
+        ws = (ROOT / "workspace").resolve()
+        if ws not in path.parents or path.suffix != ".py" or not path.is_file():
+            raise ValueError(f"not an exercise file: {rel}")
+        return path
+
+    def _get_file(self):
+        from urllib.parse import parse_qs, urlparse
+        rel = (parse_qs(urlparse(self.path).query).get("path") or [""])[0]
+        try:
+            path = self._workspace_path(rel)
+            self._send_json({"path": rel, "text": path.read_text(encoding="utf-8")})
+        except (ValueError, OSError) as exc:
+            self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _save_file(self):
+        try:
+            body = self._body()
+            path = self._workspace_path(str(body.get("path", "")))
+            text = str(body.get("text", ""))
+            tmp = path.with_suffix(".py.tmp")
+            tmp.write_text(text, encoding="utf-8", newline="\n")
+            os.replace(tmp, path)
+            self._send_json({"ok": True})
+        except (ValueError, OSError, json.JSONDecodeError) as exc:
+            self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _reset(self):
+        from .reset import apply_reset
+        from .registry import get_lesson
+        try:
+            lesson = get_lesson(str(self._body().get("lesson", "")))
+            apply_reset(lesson)
+            self._send_json({"ok": True})
+        except (KeyError, ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _job(self, action: str):
+        from . import jobs
+        try:
+            body = self._body()
+            if action == "start":
+                self._send_json(jobs.start(str(body.get("kind", ""))))
+            elif action == "stop":
+                self._send_json(jobs.stop())
+            else:
+                self.send_error(HTTPStatus.NOT_FOUND)
+        except (ValueError, RuntimeError, json.JSONDecodeError) as exc:
+            self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
     def _run_check(self):
         """POST /api/check {"lesson": id}: run `python -m course check <id>` and return its output."""
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            lesson = str(json.loads(self.rfile.read(length) or b"{}").get("lesson", ""))
+            body = self._body()
+            lesson, answer = str(body.get("lesson", "")), str(body.get("answer", ""))
         except (ValueError, json.JSONDecodeError):
-            lesson = ""
+            lesson, answer = "", ""
         if lesson not in {l.id for l in load_lessons()}:
             self._send_json({"error": f"unknown lesson {lesson!r}"}, HTTPStatus.BAD_REQUEST)
             return
@@ -96,7 +167,7 @@ class CourseHandler(SimpleHTTPRequestHandler):
             proc = subprocess.run(
                 [sys.executable, "-m", "course", "check", lesson],
                 cwd=ROOT, env=env, capture_output=True, text=True, encoding="utf-8",
-                errors="replace", timeout=900, stdin=subprocess.DEVNULL,
+                errors="replace", timeout=900, input=(answer + "\n") if answer else "",
             )
             output, ok = (proc.stdout + proc.stderr).strip(), proc.returncode == 0
         except subprocess.TimeoutExpired:
@@ -145,6 +216,15 @@ class CourseHandler(SimpleHTTPRequestHandler):
         if route == "/api/check":
             self._run_check()
             return
+        if route == "/api/file":
+            self._save_file()
+            return
+        if route == "/api/reset":
+            self._reset()
+            return
+        if route.startswith("/api/job/"):
+            self._job(route.rsplit("/", 1)[1])
+            return
         if self.path.split("?", 1)[0] != "/api/event":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
@@ -161,6 +241,10 @@ class CourseHandler(SimpleHTTPRequestHandler):
 
 
 def serve(port: int = 8000, open_browser: bool = True) -> None:
+    from .reset import sync_workspace
+
+    for change in sync_workspace():          # new lessons after an update: add their stubs
+        print(f"  {change}")
     handler = partial(CourseHandler, directory=str(ROOT))
     # Bind to localhost only: this server can write progress.json.
     httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)

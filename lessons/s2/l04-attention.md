@@ -166,8 +166,8 @@ attention_single_head(x, Wq, Wk, Wv, causal):
 :::
 
 ::: attempt
-File: `workspace/stage2/attention.py` — fill in `softmax` and `attention_single_head`. Ignore `causal` until s2-l05.
-Check: `python -m course check s2-l04`
+The editor below opens `workspace/stage2/attention.py`: fill in `softmax` and `attention_single_head`. Ignore `causal` until s2-l05.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

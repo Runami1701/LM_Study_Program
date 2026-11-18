@@ -160,8 +160,8 @@ cross_entropy_backward(cache):
 :::
 
 ::: attempt
-File: `workspace/stage1/loss.py` — fill in `cross_entropy_backward`.
-Check: `python -m course check s1-l05`
+The editor below opens `workspace/stage1/loss.py`: fill in `cross_entropy_backward`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

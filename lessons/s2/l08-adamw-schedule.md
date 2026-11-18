@@ -163,8 +163,8 @@ clip_grad_norm(params, max_norm):
 :::
 
 ::: attempt
-Files: `workspace/stage2/optim.py` — fill in `AdamW` and `clip_grad_norm`; `workspace/stage2/schedule.py` — fill in `lr_at`.
-Check: `python -m course check s2-l08`
+The editor below has a tab for each file. In `workspace/stage2/optim.py`: fill in `AdamW` and `clip_grad_norm`; in `workspace/stage2/schedule.py`, fill in `lr_at`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

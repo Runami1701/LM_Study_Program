@@ -10,6 +10,7 @@ start from the last checkpoint after an interruption.
 
 import gc
 import json
+import os
 import math
 import time
 from pathlib import Path
@@ -86,6 +87,8 @@ def train(config: dict, train_data: np.ndarray, val_data: np.ndarray, V: int, lo
 
 
 def main(config: dict = CONFIG) -> dict:
+    if os.environ.get("COURSE_RESUME"):          # the website's "Continue from its checkpoint" button
+        config = dict(config, resume=True)
     text = (ROOT / config["data"]).read_text(encoding="utf-8")
     stoi, itos = build_vocab(text)
     train_data, val_data = train_val_split(encode(text, stoi))

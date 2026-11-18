@@ -143,8 +143,8 @@ train(config, train_data, val_data, V):
 :::
 
 ::: attempt
-Files: `workspace/stage1/optim.py` — fill in `sgd_step`; `workspace/stage1/train_mlp.py` — fill in `train`.
-Check: `python -m course check s1-l10`
+The editor below has a tab for each file. In `workspace/stage1/optim.py`: fill in `sgd_step`; in `workspace/stage1/train_mlp.py`, fill in `train`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

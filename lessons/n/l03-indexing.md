@@ -187,8 +187,8 @@ count_ids(ids, V):       counts ← V zeros (int64); add 1 at every position in 
 :::
 
 ::: attempt
-File: `workspace/numpy_basics/n03_indexing.py` — fill in the five functions.
-Check: `python -m course check n-l03`
+The editor below opens `workspace/numpy_basics/n03_indexing.py`: fill in the five functions.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

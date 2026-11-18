@@ -180,8 +180,8 @@ tanh_backward(dout, cache):
 :::
 
 ::: attempt
-File: `workspace/stage1/layers.py` — fill in `linear_backward` and `tanh_backward`.
-Check: `python -m course check s1-l06`
+The editor below opens `workspace/stage1/layers.py`: fill in `linear_backward` and `tanh_backward`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

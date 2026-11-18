@@ -169,8 +169,8 @@ GPT.__call__(idx, targets):
 :::
 
 ::: attempt
-Files: `workspace/stage2/block.py` — fill in `MLP` and `Block`; `workspace/stage2/model.py` — fill in `GPT` and `count_params`.
-Check: `python -m course check s2-l07`
+The editor below has a tab for each file. In `workspace/stage2/block.py`: fill in `MLP` and `Block`; in `workspace/stage2/model.py`, fill in `GPT` and `count_params`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

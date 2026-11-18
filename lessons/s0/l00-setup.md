@@ -142,7 +142,7 @@ Do one untimed **warm-up** product first. The first product pays one-time costs,
 
 NumPy does not compute `A @ B` itself. It calls a fast linear-algebra library (usually OpenBLAS), which uses all your CPU cores. `np.show_config()` prints which library you have. The number you measure mostly describes that library and your CPU.
 
-When `python -m course check s0-l00` passes, it saves your number in `progress.json`. In Stage 3 you will use it to estimate how long a long training run takes.
+When the check for this lesson passes, it saves your number in `progress.json`. In Stage 3 you will use it to estimate how long a long training run takes.
 :::
 
 ::: think
@@ -184,8 +184,8 @@ matmul_gflops(n, reps, rng):
 :::
 
 ::: attempt
-File: `workspace/stage0/numpy_basics.py` — fill in `to_f32` and `matmul_gflops`.
-Check: `python -m course check s0-l00`. When it passes, it also prints and saves your computer's GFLOPS.
+The editor below opens `workspace/stage0/numpy_basics.py`: fill in `to_f32` and `matmul_gflops`.
+Check: press **Run check** in the Check section below.. When it passes, it also prints and saves your computer's GFLOPS.
 :::
 
 ::: solution

@@ -168,8 +168,8 @@ gradcheck(f, params, grads, eps, n_checks, rng):
 :::
 
 ::: attempt
-File: `workspace/stage1/gradcheck.py` — fill in `gradcheck`.
-Check: `python -m course check s1-l08`
+The editor below opens `workspace/stage1/gradcheck.py`: fill in `gradcheck`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

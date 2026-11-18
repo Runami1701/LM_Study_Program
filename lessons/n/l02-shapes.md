@@ -166,8 +166,8 @@ stack_two(a, b):      return a and b stacked along a new first axis
 :::
 
 ::: attempt
-File: `workspace/numpy_basics/n02_shapes.py` — fill in the four functions.
-Check: `python -m course check n-l02`
+The editor below opens `workspace/numpy_basics/n02_shapes.py`: fill in the four functions.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

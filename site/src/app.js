@@ -170,6 +170,7 @@
   }
 
   function renderLesson(id) {
+    if (editorDirty) editorSave();
     const L = BY_ID[id];
     currentId = id;
     const idx = LESSONS.indexOf(L);
@@ -234,19 +235,50 @@
           )}</code></pre></div>`
       )
       .join("");
-    h += section("attempt", "Your attempt", L.attempt + sigs);
+    const editor = L.files.length
+      ? `<div class="editor" id="editor">
+           <div class="editor-tabs" role="tablist">${L.files.map((f, i) => `<button type="button" role="tab" class="editor-tab" data-act="open-file" data-file="${esc(f)}" aria-selected="${i === 0}">${esc(f.split("/").pop())}</button>`).join("")}<span class="editor-path" id="editor-path"></span></div>
+           <textarea id="code" class="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Your code"></textarea>
+           <div class="row editor-bar">
+             <button class="btn primary small" type="button" data-act="save">Save</button>
+             <button class="btn small" type="button" data-act="save-check">Save and check</button>
+             <span class="save-state" id="save-state"></span>
+             <span class="grow"></span>
+             <button class="btn small" type="button" data-act="reset-ask">Reset my code for this lesson</button>
+           </div>
+           <div class="confirm" id="reset-confirm" hidden>
+             <p>This puts back the original empty functions of this lesson (${L.functions.map((f) => `<code>${esc(f)}</code>`).join(", ")}). Your other code is not touched.</p>
+             <div class="row"><button class="btn small danger" type="button" data-act="reset-yes">Yes, reset them</button><button class="btn small" type="button" data-act="reset-no">Keep my code</button></div>
+           </div>
+         </div>`
+      : "";
+    h += section("attempt", "Your attempt", L.attempt + (SERVED ? editor : sigs));
+
+    if (SERVED && L.jobs && L.jobs.length) {
+      h += section(
+        "run",
+        "Run",
+        `<div class="jobs">${L.jobs
+          .map((j) => `<div class="job"><button class="btn small" type="button" data-act="job-start" data-kind="${j.kind}">${esc(j.label)}</button><span class="muted small-note">${esc(j.description)}</span></div>`)
+          .join("")}</div>
+         <div class="row job-bar" id="job-bar" hidden><span id="job-state" class="small-note"></span><button class="btn small danger" type="button" data-act="job-stop">Stop</button></div>
+         <pre id="job-log" class="check-output job-log" hidden></pre>`
+      );
+    }
 
     if (L.has_check) {
       const cmd = `python -m course check ${L.id}`;
       h += section(
         "check",
         "Check",
+        (SERVED && L.ask ? `<div class="boss-ask"><p><b>${esc(L.ask)}</b></p>
+           <div class="row" role="group" aria-label="Your answer"><button class="btn small" type="button" data-act="ask-answer" data-answer="y" aria-pressed="false">Yes</button><button class="btn small" type="button" data-act="ask-answer" data-answer="n" aria-pressed="false">No</button>
+           <span class="muted small-note">Read the sample the check shows, then answer and press Run check again.</span></div></div>` : "") +
         (SERVED ? `<div class="row run-row"><button class="btn primary" type="button" data-act="run-check">Run check</button>
-           <span class="muted small-note">Checks your code in <code>${esc(L.files.join(", "))}</code>.</span></div>
-           <pre id="check-output" class="check-output" hidden></pre>` : "") +
-        `<div class="cmd"><code>${esc(cmd)}</code>
-           <button class="btn small" type="button" data-act="copy" data-text="${esc(cmd)}">Copy</button></div>
-         <div id="check-status" class="check-status" aria-live="polite"></div>`
+           <span class="muted small-note">${L.kind === "boss" ? "Reads your training results." : `Tests your code in <code>${esc(L.files.join(", "))}</code>.`}</span></div>
+           <pre id="check-output" class="check-output" hidden></pre>` : `<div class="cmd"><code>${esc(cmd)}</code>
+           <button class="btn small" type="button" data-act="copy" data-text="${esc(cmd)}">Copy</button></div>`) +
+        `<div id="check-status" class="check-status" aria-live="polite"></div>`
       );
     }
 
@@ -293,6 +325,16 @@
     renderMath(main);
     highlight(main);
     refreshStatus();
+    bossAnswer = "";
+    if (SERVED && L.files.length) { editorDirty = false; editorOpen(L.files[0], true); }
+    if (SERVED && L.jobs && L.jobs.length) {
+      const known = L.jobs.map((j) => j.kind);
+      jobKind = known.includes(jobKind) ? jobKind : null;
+      if (!jobKind) {
+        Promise.all(known.map((k) => fetch(`/api/job?kind=${k}`).then((r) => r.json()).catch(() => ({}))))
+          .then((all) => { const run = all.find((x) => x.running) || all.find((x) => x.log); if (run && run.kind) { jobKind = run.kind; $("#job-bar").hidden = false; $("#job-log").hidden = false; jobPoll(); } });
+      } else { $("#job-bar").hidden = false; $("#job-log").hidden = false; jobPoll(); }
+    }
     window.scrollTo(0, 0);
     document.title = `${L.id} · ${L.title} — NumPy LM Course`;
     tutorShowLesson();
@@ -415,7 +457,7 @@
       btn.textContent = "Checking…";
       out.hidden = false;
       out.textContent = "Running the checks for " + id + " …";
-      fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson: id }) })
+      fetch("/api/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson: id, answer: bossAnswer }) })
         .then((r) => r.json())
         .then((d) => {
           out.textContent = d.output || d.error || "(no output)";
@@ -427,6 +469,33 @@
           btn.textContent = "Run check";
           poll();
         });
+    } else if (act === "ask-answer") {
+      bossAnswer = btn.dataset.answer;
+      $$('[data-act="ask-answer"]').forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+    } else if (act === "open-file") {
+      editorOpen(btn.dataset.file);
+    } else if (act === "save") {
+      editorSave();
+    } else if (act === "save-check") {
+      editorSave().then((ok) => ok && $('[data-act="run-check"]') && $('[data-act="run-check"]').click());
+    } else if (act === "reset-ask") {
+      $("#reset-confirm").hidden = false;
+    } else if (act === "reset-no") {
+      $("#reset-confirm").hidden = true;
+    } else if (act === "reset-yes") {
+      fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson: id }) })
+        .then((r) => r.json())
+        .then((d) => {
+          $("#reset-confirm").hidden = true;
+          if (d.error) { $("#save-state").textContent = d.error; return; }
+          editorDirty = false;
+          editorOpen(editorFile, true);
+          $("#save-state").textContent = "Reset to the original stubs.";
+        });
+    } else if (act === "job-start") {
+      jobStart(btn.dataset.kind);
+    } else if (act === "job-stop") {
+      fetch("/api/job/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(() => jobPoll());
     } else if (act === "tutor-check") {
       const ta = $(`.think-input[data-i="${btn.dataset.i}"]`);
       tutorCheck(Number(btn.dataset.i), ta ? ta.value : "");
@@ -514,6 +583,93 @@
     store.set("course:last", currentId);
   }
   window.addEventListener("hashchange", route);
+
+  // ------------------------------------------------------------------- editor
+  // The lesson's exercise file, edited in place. Only files in workspace/ can be saved.
+  let editorFile = null, editorDirty = false, bossAnswer = "";
+
+  async function editorOpen(file, force) {
+    if (!$("#code")) return;
+    if (editorDirty && !force) await editorSave();
+    editorFile = file;
+    $$(".editor-tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.file === file)));
+    $("#editor-path").textContent = file;
+    $("#code").value = "Loading…";
+    try {
+      const d = await (await fetch(`/api/file?path=${encodeURIComponent(file)}`, { cache: "no-store" })).json();
+      $("#code").value = d.error ? `# ${d.error}` : d.text;
+      $("#save-state").textContent = "";
+    } catch (e) {
+      $("#code").value = "# Could not load the file. Is the course window still open?";
+    }
+    editorDirty = false;
+  }
+
+  async function editorSave() {
+    if (!editorFile || !$("#code")) return false;
+    $("#save-state").textContent = "Saving…";
+    try {
+      const r = await fetch("/api/file", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: editorFile, text: $("#code").value }) });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      editorDirty = false;
+      $("#save-state").textContent = "Saved.";
+      return true;
+    } catch (e) {
+      $("#save-state").textContent = `Not saved: ${e.message || e}`;
+      return false;
+    }
+  }
+
+  $("#main").addEventListener("keydown", (ev) => {
+    if (ev.target.id !== "code") return;
+    if (ev.key === "Tab" && !ev.shiftKey) {
+      ev.preventDefault();
+      const t = ev.target, a = t.selectionStart, b = t.selectionEnd;
+      t.setRangeText("    ", a, b, "end");
+      editorDirty = true;
+    } else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
+      ev.preventDefault();
+      editorSave();
+    }
+  });
+  $("#main").addEventListener("input", (ev) => {
+    if (ev.target.id === "code" && !editorDirty) { editorDirty = true; $("#save-state").textContent = "Unsaved changes"; }
+  });
+  window.addEventListener("beforeunload", (ev) => { if (editorDirty) { ev.preventDefault(); ev.returnValue = ""; } });
+
+  // --------------------------------------------------------------------- jobs
+  let jobKind = null, jobTimer = null;
+
+  async function jobStart(kind) {
+    if (editorDirty) await editorSave();
+    const r = await fetch("/api/job/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
+    const d = await r.json();
+    jobKind = kind;
+    $("#job-bar").hidden = false;
+    $("#job-log").hidden = false;
+    if (d.error) { $("#job-state").textContent = d.error; return; }
+    jobPoll();
+  }
+
+  async function jobPoll() {
+    clearTimeout(jobTimer);
+    if (!jobKind || !$("#job-log")) return;
+    let d;
+    try { d = await (await fetch(`/api/job?kind=${encodeURIComponent(jobKind)}`, { cache: "no-store" })).json(); } catch (e) { return; }
+    const log = $("#job-log");
+    if (!log) return;
+    log.textContent = d.log || "(starting…)";
+    log.scrollTop = log.scrollHeight;
+    const mins = d.seconds ? ` · ${Math.floor(d.seconds / 60)} min ${d.seconds % 60} s` : "";
+    $("#job-state").textContent = d.running ? `Running${mins}. You can keep reading; this page updates every 2 seconds.`
+      : d.stopped ? `Stopped${mins}.` : d.exit_code === 0 ? `Finished${mins}.` : d.exit_code != null ? `Stopped with an error (code ${d.exit_code}). Read the last lines above.` : "";
+    log.classList.toggle("passed", d.exit_code === 0);
+    $('[data-act="job-stop"]').hidden = !d.running;
+    $$('[data-act="job-start"]').forEach((b) => (b.disabled = d.running));
+    if (d.running) jobTimer = setTimeout(jobPoll, 2000);
+    else poll();
+  }
 
   // -------------------------------------------------------------------- tutor
   // A chat column on the right. One conversation per lesson, kept in this browser.

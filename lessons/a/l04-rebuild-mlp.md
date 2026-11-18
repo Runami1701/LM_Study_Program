@@ -109,8 +109,8 @@ __call__(x, y):
 :::
 
 ::: attempt
-File: `workspace/autograd/mlp.py` — fill in the `MLP` class.
-Check: `python -m course check a-l04`
+The editor below opens `workspace/autograd/mlp.py`: fill in the `MLP` class.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

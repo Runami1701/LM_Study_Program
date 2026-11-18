@@ -165,8 +165,8 @@ shift_rows(A):      return A minus its row maxima (kept as a column)
 :::
 
 ::: attempt
-File: `workspace/numpy_basics/n04_broadcasting.py` — fill in the five functions.
-Check: `python -m course check n-l04`
+The editor below opens `workspace/numpy_basics/n04_broadcasting.py`: fill in the five functions.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

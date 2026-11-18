@@ -8,6 +8,7 @@ files: [workspace/stage1/train_mlp.py]
 functions: [estimate_loss, lr_at]
 tests: tests/s1/test_l12_eval.py
 est_minutes: 60
+jobs: [train-s1]
 ---
 
 ::: goal
@@ -139,9 +140,9 @@ lr_at(step, config):
 :::
 
 ::: attempt
-File: `workspace/stage1/train_mlp.py` — fill in `estimate_loss` and `lr_at`.
-Check: `python -m course check s1-l12`
-Then run the full training (about 1.5 minutes on the reference CPU) with `python -m workspace.stage1.train_mlp`, and take on the boss with `python -m course check s1-boss`.
+The editor below opens `workspace/stage1/train_mlp.py`: fill in `estimate_loss` and `lr_at`.
+Check: press **Run check** in the Check section below.
+Then press **Train the Stage 1 model** in the Run section below (about 1.5 minutes on the reference CPU), and take on the boss in the s1-boss lesson.
 :::
 
 ::: solution

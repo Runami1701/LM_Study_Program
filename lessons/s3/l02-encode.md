@@ -125,8 +125,8 @@ encode(text, merges):
 :::
 
 ::: attempt
-File: `workspace/stage3/bpe.py` — fill in `encode` and `decode`.
-Check: `python -m course check s3-l02`
+The editor below opens `workspace/stage3/bpe.py`: fill in `encode` and `decode`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

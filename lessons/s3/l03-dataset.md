@@ -99,8 +99,8 @@ open_tokens(path):
 :::
 
 ::: attempt
-File: `workspace/stage3/dataset.py` — fill in `write_tokens` and `open_tokens`.
-Check: `python -m course check s3-l03`
+The editor below opens `workspace/stage3/dataset.py`: fill in `write_tokens` and `open_tokens`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

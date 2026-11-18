@@ -31,7 +31,11 @@ You will make NumPy arrays, read their shape and number type, and see the differ
 
 Start the course by double-clicking `start_course.bat` (Windows) or running `./start_course.sh` (Linux/macOS). The first start installs everything; later starts just open this website.
 
-Each lesson has a **Run check** button in its Check section. Press it after you write your code: it tests your functions and shows what is right and what is wrong. The same check also runs from a terminal with `python -m course check <lesson>`.
+Everything else happens on this website:
+
+- **Write your code** in the editor in each lesson's *Your attempt* section, and press **Save** (or Ctrl+S).
+- **Check it** with the **Run check** button in the *Check* section. It tests your functions and shows what is right and what is wrong.
+- **Run training** and other long tasks with the buttons in the *Run* section of the lessons that need them.
 
 To try the examples below, open a Python shell (type `python` in a terminal) and run `import numpy as np` first. Every example uses the name `np` for NumPy.
 
@@ -190,8 +194,8 @@ multiply_both_ways(A, B):    return (A times B entry by entry, A matrix-times B)
 :::
 
 ::: attempt
-File: `workspace/numpy_basics/n01_arrays.py` — fill in the four functions.
-Check: `python -m course check n-l01`
+The editor below opens `workspace/numpy_basics/n01_arrays.py`: fill in the four functions.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

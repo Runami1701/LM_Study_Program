@@ -125,8 +125,8 @@ embedding_backward(demb, x, V):
 :::
 
 ::: attempt
-File: `workspace/stage1/layers.py` — fill in `embedding_backward`.
-Check: `python -m course check s1-l07`
+The editor below opens `workspace/stage1/layers.py`: fill in `embedding_backward`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

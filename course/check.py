@@ -268,10 +268,10 @@ def check_boss(lesson: Lesson, impl: str) -> bool:
     if ok and spec.get("ask"):
         try:
             answer = input(f"  {spec['ask']} [y/n] ").strip().lower()
-        except EOFError:  # started from the website: no keyboard to answer with
+        except EOFError:  # started from the website without an answer
             answer = ""
             print(f"\n  Last step: {spec['ask']}")
-            print("  Read the sample above, then answer in a terminal:  python -m course check " + lesson.id)
+            print("  Read the sample above, then answer with the Yes / No buttons and press Run check again.")
         ok &= answer in ("y", "yes")
     if impl == "workspace":
         data = progress.load()

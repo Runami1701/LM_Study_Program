@@ -8,6 +8,7 @@ files: [workspace/stage2/model.py, workspace/stage2/train_tf.py]
 functions: [save_checkpoint, load_checkpoint, generate, train]
 tests: tests/s2/test_l09_train.py
 est_minutes: 60
+jobs: [train-s2, resume-s2]
 ---
 
 ::: goal
@@ -80,7 +81,7 @@ The default config: $d = 128$, 4 heads, 4 blocks, $T = 128$, batches of 32 seque
 
 ### Checkpoints
 
-A long run can be interrupted: a crash, a power cut, a closed laptop. A checkpoint saves every parameter by its name from `named_parameters()`, for example `blocks.0.attn.qkv.W`. Loading copies the saved arrays back **into the existing Tensors** (`p.data[...] = saved[name]`), so the optimizer, which holds those Tensors, keeps working. Loading checks every name and shape, so a checkpoint from a different model size fails loudly instead of loading garbage. Set `CONFIG["resume"] = True` to continue from `runs/s2/ckpt.npz`.
+A long run can be interrupted: a crash, a power cut, a closed laptop. A checkpoint saves every parameter by its name from `named_parameters()`, for example `blocks.0.attn.qkv.W`. Loading copies the saved arrays back **into the existing Tensors** (`p.data[...] = saved[name]`), so the optimizer, which holds those Tensors, keeps working. Loading checks every name and shape, so a checkpoint from a different model size fails loudly instead of loading garbage. The **Continue Stage 2 from its checkpoint** button (in the Run section) continues from `runs/s2/ckpt.npz`.
 
 (For a perfect resume you would also save AdamW's `m`, `v` and `t`, and the step number. We keep it simple: resuming restarts the schedule with the saved weights.)
 
@@ -147,9 +148,9 @@ train(config, train_data, val_data, V):
 :::
 
 ::: attempt
-Files: `workspace/stage2/model.py` — fill in `save_checkpoint` and `load_checkpoint`; `workspace/stage2/train_tf.py` — fill in `generate` and `train`.
-Check: `python -m course check s2-l09`
-Then train (one to two hours): `python -m workspace.stage2.train_tf`, and take on the boss with `python -m course check s2-boss`.
+The editor below has a tab for each file. In `workspace/stage2/model.py`: fill in `save_checkpoint` and `load_checkpoint`; in `workspace/stage2/train_tf.py`, fill in `generate` and `train`.
+Check: press **Run check** in the Check section below.
+Then press **Train the transformer (Stage 2)** in the Run section below (one to two hours), and take on the boss in the s2-boss lesson.
 :::
 
 ::: solution

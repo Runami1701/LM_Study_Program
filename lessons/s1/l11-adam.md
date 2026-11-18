@@ -178,8 +178,8 @@ step(grads):
 :::
 
 ::: attempt
-File: `workspace/stage1/optim.py` — fill in the `Adam` class.
-Check: `python -m course check s1-l11`
+The editor below opens `workspace/stage1/optim.py`: fill in the `Adam` class.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

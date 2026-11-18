@@ -118,8 +118,8 @@ __call__(x, causal):
 :::
 
 ::: attempt
-File: `workspace/stage2/attention.py` — fill in `MultiHeadAttention`.
-Check: `python -m course check s2-l06`
+The editor below opens `workspace/stage2/attention.py`: fill in `MultiHeadAttention`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

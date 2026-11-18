@@ -12,6 +12,7 @@ boss:
   threshold: 1.5
   ask: "Read the sample above. Is it a coherent short story (sentences that make sense together)?"
   run: python -m workspace.stage3.train_bpe_lm
+jobs: [data-tinystories, train-s3, resume-s3]
 ---
 
 ::: goal
@@ -21,9 +22,9 @@ You will train the subword transformer on TinyStories, overnight, until it write
 ::: concept
 ### The run
 
-1. `python -m course data tinystories` downloads the stories (about 120 MB, once). The start window can't do this for you, because Stage 1 doesn't need it.
-2. `python -m workspace.stage3.train_bpe_lm` learns the BPE merges, tokenizes the data (a few minutes, once), and trains. It saves a checkpoint every 500 steps; with `CONFIG["resume"] = True` it continues after an interruption.
-3. When it finishes, run `python -m course check s3-boss` in a terminal. The check reads `runs/s3/results.json`, compares `val_bpc` with the target, prints the sample story, and asks you to judge it. (The **Run check** button shows the same numbers, but you answer the question in the terminal.)
+1. Press **Download TinyStories** in the Run section below (about 120 MB, once).
+2. Press **Train the BPE model (Stage 3)**. It learns the BPE merges, tokenizes the data (a few minutes, once), and trains, saving a checkpoint every 500 steps. If it stops, press **Continue Stage 3 from its checkpoint**.
+3. When it finishes, read the sample story the check shows, answer the question with **Yes** or **No** in the Check section, and press **Run check**. The check reads `runs/s3/results.json` and compares `val_bpc` with the target.
 
 ### The target is an estimate
 
@@ -44,8 +45,8 @@ Your Korean morphological analyzer worked on jamo. Try BPE on Korean text: train
 :::
 
 ::: attempt
-Train: `python -m workspace.stage3.train_bpe_lm` (overnight)
-Check: `python -m course check s3-boss`
+Train: press **Train the BPE model (Stage 3)** in the Run section below (overnight).
+Check: press **Run check** in the Check section below.
 :::
 
 ::: recap

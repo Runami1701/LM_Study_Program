@@ -124,8 +124,8 @@ gelu(x):
 :::
 
 ::: attempt
-File: `workspace/stage2/layers.py` — fill in `gelu`.
-Check: `python -m course check s2-l03`
+The editor below opens `workspace/stage2/layers.py`: fill in `gelu`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

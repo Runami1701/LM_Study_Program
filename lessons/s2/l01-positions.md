@@ -123,8 +123,8 @@ Embeddings.__call__(idx):
 :::
 
 ::: attempt
-File: `workspace/stage2/layers.py` — fill in `get_batch_seq`, `Linear` and `Embeddings`. The `Module` class is given.
-Check: `python -m course check s2-l01`
+The editor below opens `workspace/stage2/layers.py`: fill in `get_batch_seq`, `Linear` and `Embeddings`. The `Module` class is given.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

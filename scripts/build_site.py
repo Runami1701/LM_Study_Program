@@ -97,7 +97,14 @@ def lesson_payload(lesson) -> dict:
         if code:
             signatures.append({"file": rel, "code": "\n\n".join(code)})
 
+    from course.jobs import JOBS, describe
+
+    for kind in lesson.jobs:
+        if kind not in JOBS:
+            raise BuildError(f"{lesson.path.name}: unknown job {kind!r}")
     return {
+        "jobs": [describe(k) for k in lesson.jobs],
+        "ask": lesson.boss.get("ask"),
         "id": lesson.id,
         "title": lesson.title,
         "stage": lesson.stage,

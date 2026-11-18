@@ -5,6 +5,7 @@ Run from the repository root:  python -m solutions.stage3.train_bpe_lm
 
 import gc
 import json
+import os
 import math
 import time
 from pathlib import Path
@@ -73,6 +74,8 @@ def prepare(config: dict, log=print):
 
 
 def main(config: dict = CONFIG) -> dict:
+    if os.environ.get("COURSE_RESUME"):          # the website's "Continue from its checkpoint" button
+        config = dict(config, resume=True)
     merges, train_data, val_data = prepare(config)
     V = 256 + len(merges)
     t0 = time.perf_counter()

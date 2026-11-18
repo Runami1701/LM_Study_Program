@@ -129,8 +129,8 @@ backward(root):
 :::
 
 ::: attempt
-File: `workspace/autograd/tensor.py` — fill in the module-level function `backward(root)`. `Tensor.backward()` already calls it.
-Check: `python -m course check a-l03`
+The editor below opens `workspace/autograd/tensor.py`: fill in the module-level function `backward(root)`. `Tensor.backward()` already calls it.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

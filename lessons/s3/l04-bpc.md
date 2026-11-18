@@ -128,8 +128,8 @@ evaluate_bpc(model, text, merges, T, batch_size):
 :::
 
 ::: attempt
-File: `workspace/stage3/metrics.py` — fill in `bits_per_char` and `evaluate_bpc`.
-Check: `python -m course check s3-l04`
+The editor below opens `workspace/stage3/metrics.py`: fill in `bits_per_char` and `evaluate_bpc`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

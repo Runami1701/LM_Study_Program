@@ -11,6 +11,7 @@ boss:
   metric: val_loss
   threshold: 1.75
   run: python -m workspace.stage1.train_mlp
+jobs: [train-s1, sample-s1]
 ---
 
 ::: goal
@@ -22,8 +23,8 @@ You will train your own Stage 1 model on Tiny Shakespeare until its validation l
 
 From the repository root:
 
-1. `python -m workspace.stage1.train_mlp` trains with the `CONFIG` at the top of the file and writes `runs/s1/results.json`, `runs/s1/params.npz` and a sample.
-2. `python -m course check s1-boss` reads `results.json` and compares `val_loss` with the target.
+1. Press **Train the Stage 1 model** in the Run section below. It trains with the `CONFIG` at the top of `workspace/stage1/train_mlp.py` and writes `runs/s1/results.json`, `runs/s1/params.npz` and a sample.
+2. Press **Run check**. It reads `results.json` and compares `val_loss` with the target.
 
 `estimate_loss` measures `val_loss` at the end, on 200 validation batches of 512 examples. So it is a stable number, not one lucky batch.
 
@@ -46,8 +47,8 @@ Write down what you tried. Real models are tuned with exactly such a log.
 :::
 
 ::: attempt
-Train: `python -m workspace.stage1.train_mlp`
-Check: `python -m course check s1-boss`
+Train: press **Train the Stage 1 model** in the Run section below.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: recap

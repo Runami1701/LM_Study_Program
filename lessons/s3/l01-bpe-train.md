@@ -169,8 +169,8 @@ train_bpe(text, vocab_size):
 :::
 
 ::: attempt
-File: `workspace/stage3/bpe.py` — fill in `merge_pair`, `count_pairs` and `train_bpe`.
-Check: `python -m course check s3-l01`
+The editor below opens `workspace/stage3/bpe.py`: fill in `merge_pair`, `count_pairs` and `train_bpe`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

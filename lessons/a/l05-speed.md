@@ -151,8 +151,8 @@ matmul backward:
 :::
 
 ::: attempt
-Files: `workspace/autograd/ops.py` — fill in `shared_weight_grad` and call it from your `matmul`; `workspace/autograd/tensor.py` — switch your gradient allocations to `np.zeros(shape, dtype=...)`.
-Check: `python -m course check a-l05`
+The editor below has a tab for each file. In `workspace/autograd/ops.py`: fill in `shared_weight_grad` and call it from your `matmul`; `workspace/autograd/tensor.py` — switch your gradient allocations to `np.zeros(shape, dtype=...)`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

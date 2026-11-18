@@ -57,20 +57,22 @@ The same file: `python -m course tutor --handoff`.
 
 ## How to take a lesson
 
-1. Read the lesson on the site. Answer each think-question in the box before
-   comparing with the model answer.
-2. Open the file named under **Your attempt** (in `workspace/`) and implement
-   the functions. Use the hints one at a time only when you are stuck.
-3. Run the check, e.g.
+Everything happens in the course website; you never need the terminal.
 
-   ```bash
-   python -m course check s1-l01
-   ```
+1. Read the lesson. Answer each think-question in its box, then compare with the model
+   answer (or press **Check with the tutor**).
+2. Write your code in the editor under **Your attempt**: it opens the lesson's file from
+   `workspace/`. **Save** with the button or Ctrl+S. Use the hints one at a time when stuck.
+3. Press **Run check** (or **Save and check**). It tells you which function is wrong and why;
+   on a pass the solution unlocks and the next lesson is named.
+4. Lessons with long tasks (downloads, training, writing text) have a **Run** section with
+   buttons, live output and a Stop button. Stage 2 and 3 can continue from their checkpoint.
+5. **Reset my code for this lesson** puts the original stubs back (it asks first).
 
-   It tells you which function is wrong and why. On a pass, the solution
-   unlocks on the site within a few seconds and the next lesson is printed.
-4. Try the **Break it** experiments: they show what each piece is protecting
-   you from.
+When you pull a new version of the course, the start window adds new lesson stubs to your
+`workspace/` automatically; your code is kept.
+
+The commands below do the same things from a terminal, if you ever want them.
 
 ## Commands
 

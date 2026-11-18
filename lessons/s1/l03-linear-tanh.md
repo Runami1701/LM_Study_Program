@@ -198,8 +198,8 @@ tanh_forward(x):
 :::
 
 ::: attempt
-File: `workspace/stage1/layers.py` — fill in `linear_forward` and `tanh_forward`.
-Check: `python -m course check s1-l03`
+The editor below opens `workspace/stage1/layers.py`: fill in `linear_forward` and `tanh_forward`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

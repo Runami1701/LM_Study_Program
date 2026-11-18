@@ -154,8 +154,8 @@ flatten_context(emb):
 :::
 
 ::: attempt
-File: `workspace/stage1/layers.py` — fill in `embedding_forward` and `flatten_context`.
-Check: `python -m course check s1-l02`
+The editor below opens `workspace/stage1/layers.py`: fill in `embedding_forward` and `flatten_context`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

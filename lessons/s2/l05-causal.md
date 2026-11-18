@@ -118,8 +118,8 @@ attention_single_head(..., causal):
 :::
 
 ::: attempt
-File: `workspace/stage2/attention.py` — fill in `causal_mask`, and use it in `attention_single_head` when `causal=True`.
-Check: `python -m course check s2-l05`
+The editor below opens `workspace/stage2/attention.py`: fill in `causal_mask`, and use it in `attention_single_head` when `causal=True`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

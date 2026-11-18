@@ -8,6 +8,7 @@ files: [workspace/stage1/data.py]
 functions: [build_vocab, encode, decode, train_val_split, get_batch]
 tests: tests/s1/test_l01_data.py
 est_minutes: 40
+jobs: [data-shakespeare]
 ---
 
 ::: goal
@@ -181,8 +182,8 @@ get_batch(data, B, k, rng):
 :::
 
 ::: attempt
-File: `workspace/stage1/data.py` — fill in `build_vocab`, `encode`, `decode`, `train_val_split` and `get_batch`.
-Check: `python -m course check s1-l01`
+The editor below opens `workspace/stage1/data.py`: fill in `build_vocab`, `encode`, `decode`, `train_val_split` and `get_batch`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

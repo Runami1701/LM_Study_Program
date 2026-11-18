@@ -8,6 +8,7 @@ files: [workspace/stage3/train_bpe_lm.py]
 functions: [estimate_hours, tokens_for_hours]
 tests: tests/s3/test_l05_scale.py
 est_minutes: 45
+jobs: [data-tinystories, train-s3, resume-s3]
 ---
 
 ::: goal
@@ -97,7 +98,7 @@ The default config trains for 6,000 steps of $16 \times 256 = 4{,}096$ tokens: $
 
 ### Running it overnight
 
-`python -m workspace.stage3.train_bpe_lm`. The first start learns the merges and tokenizes the data (a few minutes, once). Then it trains, saving a checkpoint every 500 steps. If the run stops, set `CONFIG["resume"] = True` and start it again. At the end it measures bits per character on 300,000 held-out characters and writes `runs/s3/results.json` with a sample story.
+Press **Train the BPE model (Stage 3)** in the Run section below (download TinyStories first, with the button next to it). The first run learns the merges and tokenizes the data (a few minutes, once). Then it trains, saving a checkpoint every 500 steps. If the run stops, press **Continue Stage 3 from its checkpoint**. At the end it measures bits per character on 300,000 held-out characters and writes `runs/s3/results.json` with a sample story.
 
 Use your Stage 2 code: `train_bpe_lm.py` calls your `train` from `workspace/stage2/train_tf.py`, with your GPT, AdamW and schedule. Nothing new has to be written for the model itself.
 :::
@@ -133,9 +134,9 @@ tokens_for_hours(N, hours, flops_per_s):  return int(hours · 3600 · flops_per_
 :::
 
 ::: attempt
-File: `workspace/stage3/train_bpe_lm.py` — fill in `estimate_hours` and `tokens_for_hours`.
-Check: `python -m course check s3-l05`
-Then start the long run: `python -m workspace.stage3.train_bpe_lm`, and take on the boss when it finishes.
+The editor below opens `workspace/stage3/train_bpe_lm.py`: fill in `estimate_hours` and `tokens_for_hours`.
+Check: press **Run check** in the Check section below.
+Then start the long run with **Train the BPE model (Stage 3)** in the Run section, and take on the boss when it finishes.
 :::
 
 ::: solution

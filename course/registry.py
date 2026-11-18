@@ -46,6 +46,7 @@ class Lesson:
     est_minutes: int | None = None
     kind: str = "lesson"  # "lesson" or "boss"
     boss: dict = field(default_factory=dict)  # boss lessons: results file, metric, threshold
+    jobs: list[str] = field(default_factory=list)  # long tasks the site offers as buttons
 
     @property
     def sort_key(self) -> tuple[int, int]:
@@ -118,6 +119,7 @@ def load_lessons() -> tuple[Lesson, ...]:
                 est_minutes=meta.get("est_minutes"),
                 kind=str(meta.get("kind", "lesson")),
                 boss=dict(meta.get("boss") or {}),
+                jobs=list(meta.get("jobs") or []),
             )
         )
     lessons.sort(key=lambda l: l.sort_key)

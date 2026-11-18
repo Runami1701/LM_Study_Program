@@ -196,8 +196,8 @@ cross_entropy(logits, y):
 :::
 
 ::: attempt
-File: `workspace/stage1/loss.py` — fill in `softmax` and `cross_entropy`.
-Check: `python -m course check s1-l04`
+The editor below opens `workspace/stage1/loss.py`: fill in `softmax` and `cross_entropy`.
+Check: press **Run check** in the Check section below.
 :::
 
 ::: solution

@@ -12,6 +12,7 @@ boss:
   threshold: 1.60
   must_beat: runs/s1/results.json
   run: python -m workspace.stage2.train_tf
+jobs: [train-s2, resume-s2]
 ---
 
 ::: goal
@@ -21,10 +22,10 @@ You will train your own transformer on Tiny Shakespeare until its validation los
 ::: concept
 ### The run
 
-1. `python -m workspace.stage2.train_tf` trains with the `CONFIG` at the top of the file. It prints the validation loss every 250 steps, saves `runs/s2/ckpt.npz`, and at the end writes `runs/s2/results.json` with a text sample.
-2. Press **Run check** (or run `python -m course check s2-boss`). The check reads `results.json`, compares `val_loss` with the target, and compares it with `runs/s1/results.json` from the Stage 1 boss.
+1. Press **Train the transformer (Stage 2)** in the Run section below. It trains with the `CONFIG` at the top of `workspace/stage2/train_tf.py`, shows the validation loss every 250 steps, saves `runs/s2/ckpt.npz`, and at the end writes `runs/s2/results.json` with a text sample.
+2. Press **Run check**. The check reads `results.json`, compares `val_loss` with the target, and compares it with `runs/s1/results.json` from the Stage 1 boss.
 
-If the run is interrupted, set `CONFIG["resume"] = True` and start it again: it continues from the last checkpoint.
+If the run stops (a crash, a closed window), press **Continue Stage 2 from its checkpoint**: it starts from the last saved checkpoint.
 
 ### The reference, and an estimated target
 
@@ -55,8 +56,8 @@ The reference sample at step 1,500 (temperature 0.8). A finished run should look
 :::
 
 ::: attempt
-Train: `python -m workspace.stage2.train_tf`
-Check: press **Run check**, or run `python -m course check s2-boss`
+Train: press **Train the transformer (Stage 2)** in the Run section below.
+Check: press **Run check** when the run has finished.
 :::
 
 ::: recap
