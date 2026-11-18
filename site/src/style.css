@@ -262,10 +262,27 @@ pre code.language-pseudo { color: var(--text); }
 .tutor-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
 .tutor-title { font-weight: 650; }
 .tutor-sub { font-size: 12px; color: var(--text-muted); }
-.tutor-settings { display: grid; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg-sunk); }
-.tutor-settings label { font-size: 12px; font-weight: 650; color: var(--text-muted); margin-top: 4px; }
-.tutor-settings input, .tutor-settings select, .tutor-form textarea {
+.tutor-setup { display: grid; gap: 10px; padding: 14px; border-bottom: 1px solid var(--border); background: var(--bg-sunk); overflow-y: auto; max-height: 75vh; }
+.setup-title { font-weight: 700; font-size: 15px; }
+.setup-text { margin: 0; color: var(--text-muted); }
+.choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choice { text-align: left; display: grid; gap: 3px; padding: 10px 12px; border-radius: 9px; border: 1.5px solid var(--border-strong); background: var(--bg-elev); color: var(--text); cursor: pointer; font: inherit; }
+.choice b { font-size: 14.5px; }
+.choice span { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; }
+.choice[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.setup-steps { margin: 0; padding-left: 20px; display: grid; gap: 10px; line-height: 1.45; }
+.setup-steps label { display: block; font-weight: 650; margin-bottom: 4px; }
+.setup-steps input, .setup-more input { font: inherit; color: var(--text); background: var(--bg); border: 1.5px solid var(--accent); border-radius: 7px; padding: 8px 10px; width: 100%; }
+.cmd-line { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.cmd-line code { font-size: 13px; padding: 5px 8px; }
+.setup-msg { font-size: 13.5px; line-height: 1.45; }
+.setup-msg.ok { color: var(--ok); font-weight: 600; }
+.setup-msg.bad { color: var(--danger); }
+.setup-more summary { cursor: pointer; font-size: 12.5px; color: var(--text-muted); }
+.setup-more { display: grid; gap: 6px; font-size: 13px; }
+.tutor-form textarea {
   font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border-strong); border-radius: 7px; padding: 7px 9px; width: 100%;
+}
 }
 .tutor-hint { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
 .tutor-log { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }

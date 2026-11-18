@@ -576,7 +576,8 @@
     log.innerHTML = "";
     tutorMessage("note", `Lesson ${L.id} · ${L.title}. The tutor sees this lesson (not its solution) and gives hints rather than finished code. Chats are saved on this computer.`);
     if (hist.has_summary) tutorMessage("note", "Earlier messages of this chat were folded into a summary; the tutor still remembers them.");
-    if (!tutorState.ready) tutorMessage("note", "The tutor is not set up yet: press the gear above and choose a model service.");
+    if (!tutorState.ready) tutorMessage("note", "The tutor is not set up yet: follow the steps above.");
+    if (!tutorState.ready && $("#tutor-setup").hidden) tutorSettings(true);
     for (const turn of hist.messages || []) tutorMessage(turn.role === "assistant" ? "tutor" : "user", turn.content);
     Object.entries(hist.checks || {}).forEach(([i, c]) => {
       const ta = $(`.think-input[data-i="${i}"]`);
@@ -604,7 +605,7 @@
   let tutorBusy = false;
   async function tutorRun(userText, request, shown) {
     if (tutorBusy) return;
-    if (!tutorState.ready) { tutorOpen(true); tutorSettings(true); tutorMessage("note", "Set up the tutor first (the form above)."); return; }
+    if (!tutorState.ready) { tutorOpen(true); tutorSettings(true); tutorMessage("note", "Set up the tutor first (the steps above)."); return; }
     tutorBusy = true;
     $("#tutor-send").disabled = true;
     const id = currentId;
@@ -646,39 +647,70 @@
     }
   }
 
-  async function tutorSettings(open) {
-    const form = $("#tutor-settings");
-    form.hidden = !open;
+  let setupProvider = null;
+
+  function tutorSettings(open) {
+    $("#tutor-setup").hidden = !open;
     $("#tutor-gear").setAttribute("aria-expanded", String(open));
     if (!open) return;
-    $("#t-provider").value = tutorState.provider || "openrouter";
-    $("#t-model").value = tutorState.model || tutorState.providers[$("#t-provider").value] || "";
-    $("#t-key").value = "";
-    $("#t-key").placeholder = tutorState.has_key ? "saved (leave empty to keep it)" : "sk-or-...";
-    $("#t-msg").textContent = "";
-    tutorProviderChanged(false);
+    $("#setup-msg").textContent = "";
+    $("#setup-msg").className = "setup-msg";
+    $("#setup-cancel").hidden = !tutorState.ready;
+    pickProvider(tutorState.provider || null);
   }
 
-  async function tutorProviderChanged(resetModel = true) {
-    const prov = $("#t-provider").value;
-    $("#t-key-row").hidden = prov !== "openrouter";
-    if (resetModel) $("#t-model").value = tutorState.providers[prov] || "";
-    const list = $("#t-models");
-    list.innerHTML = "";
-    if (prov === "ollama") {
-      $("#t-model-hint").textContent = "Install Ollama (ollama.com), then run: ollama pull qwen2.5:3b. Any model you have pulled works, e.g. llama3.2:3b.";
-      ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "gemma2:2b"].forEach((m) => list.insertAdjacentHTML("beforeend", `<option value="${m}">`));
-      return;
+  async function pickProvider(prov) {
+    setupProvider = prov;
+    $$(".choice").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.prov === prov)));
+    $("#setup-openrouter").hidden = prov !== "openrouter";
+    $("#setup-ollama").hidden = prov !== "ollama";
+    $("#setup-actions").hidden = !prov;
+    $("#setup-more").hidden = !prov;
+    $("#t-model").value = "";
+    $("#t-models").innerHTML = "";
+    if (prov === "openrouter") {
+      $("#t-key").value = "";
+      $("#t-key-saved").textContent = tutorState.has_key && tutorState.provider === "openrouter" ? "A key is already saved; leave the box empty to keep it." : "";
+      setTimeout(() => $("#t-key").focus(), 0);
+      try {
+        const d = await (await fetch("/api/tutor/models")).json();
+        (d.models || []).forEach((m) => $("#t-models").insertAdjacentHTML("beforeend", `<option value="${esc(m)}">`));
+      } catch (e) { /* the list is optional */ }
+    } else if (prov === "ollama") {
+      $("#ollama-state").textContent = "Looking for Ollama…";
+      try {
+        const st = await (await fetch("/api/tutor/ollama", { cache: "no-store" })).json();
+        (st.models || []).forEach((m) => $("#t-models").insertAdjacentHTML("beforeend", `<option value="${esc(m)}">`));
+        $("#ollama-state").textContent = !st.running
+          ? "Ollama is not running yet."
+          : st.models.length ? `Ollama is running with ${st.models.length} model(s): ${st.models.slice(0, 3).join(", ")}.` : "Ollama is running, but no model is downloaded yet (step 2).";
+      } catch (e) {
+        $("#ollama-state").textContent = "";
+      }
     }
-    $("#t-model-hint").textContent = "Loading the list of free models…";
+  }
+
+  async function tutorConnect() {
+    if (!setupProvider) return;
+    const btn = $("#setup-connect");
+    const msg = $("#setup-msg");
+    btn.disabled = true;
+    msg.className = "setup-msg";
+    msg.textContent = setupProvider === "openrouter" ? "Connecting to OpenRouter and testing a free model… (up to a minute)" : "Connecting to Ollama and testing the model…";
     try {
-      const d = await (await fetch("/api/tutor/models")).json();
-      (d.models || []).forEach((m) => list.insertAdjacentHTML("beforeend", `<option value="${esc(m)}">`));
-      $("#t-model-hint").textContent = d.models && d.models.length
-        ? `${d.models.length} free models available right now; click the box to pick one. Free models change often: if one stops working, pick another.`
-        : "Could not load the list (offline?). Type a model id ending in :free.";
+      const d = await tutorPost("/api/tutor/setup", { provider: setupProvider, api_key: $("#t-key").value, model: $("#t-model").value.trim() });
+      tutorState = d;
+      msg.className = "setup-msg ok";
+      msg.textContent = `Connected. The tutor uses ${d.picked}. Ask your first question below.`;
+      $("#t-key").value = "";
+      tutorShowLesson();
+      setTimeout(() => tutorSettings(false), 1600);
     } catch (e) {
-      $("#t-model-hint").textContent = "Could not load the list. Type a model id ending in :free.";
+      msg.className = "setup-msg bad";
+      msg.textContent = String(e.message || e);
+      if (setupProvider === "ollama") pickProvider("ollama");
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -693,20 +725,16 @@
     $("#tutor-btn").hidden = false;
     $("#tutor-btn").addEventListener("click", () => tutorOpen($("#tutor").hidden));
     $("#tutor-close").addEventListener("click", () => tutorOpen(false));
-    $("#tutor-gear").addEventListener("click", () => tutorSettings($("#tutor-settings").hidden));
-    $("#t-cancel").addEventListener("click", () => tutorSettings(false));
-    $("#t-provider").addEventListener("change", () => tutorProviderChanged(true));
-    $("#tutor-settings").addEventListener("submit", async (ev) => {
-      ev.preventDefault();
-      $("#t-msg").textContent = "Saving…";
-      try {
-        tutorState = await tutorPost("/api/tutor/config", { provider: $("#t-provider").value, model: $("#t-model").value, api_key: $("#t-key").value });
-        $("#t-msg").textContent = tutorState.ready ? "Saved. Ask a question below to try it." : "Saved, but an OpenRouter key is still missing.";
-        if (tutorState.ready) setTimeout(() => tutorSettings(false), 900);
-        tutorShowLesson();
-      } catch (e) {
-        $("#t-msg").textContent = String(e.message || e);
-      }
+    $("#tutor-gear").addEventListener("click", () => tutorSettings($("#tutor-setup").hidden));
+    $("#setup-cancel").addEventListener("click", () => tutorSettings(false));
+    $$(".choice").forEach((b) => b.addEventListener("click", () => pickProvider(b.dataset.prov)));
+    $("#setup-connect").addEventListener("click", tutorConnect);
+    $("#t-key").addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); tutorConnect(); } });
+    $("#copy-pull").addEventListener("click", (ev) => {
+      const b = ev.currentTarget, text = "ollama pull qwen2.5:3b";
+      const done = () => { b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1400); };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+      else fallbackCopy(text, done);
     });
     $("#tutor-form").addEventListener("submit", (ev) => {
       ev.preventDefault();

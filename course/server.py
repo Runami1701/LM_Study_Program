@@ -63,6 +63,10 @@ class CourseHandler(SimpleHTTPRequestHandler):
             except KeyError:
                 self._send_json({"error": "unknown lesson"}, HTTPStatus.BAD_REQUEST)
             return
+        if path == "/api/tutor/ollama":
+            from . import tutor
+            self._send_json(tutor.ollama_status())
+            return
         if path == "/api/tutor/models":
             from . import tutor
             try:
@@ -106,7 +110,10 @@ class CourseHandler(SimpleHTTPRequestHandler):
             if length > 200_000:
                 raise tutor.TutorError("message too long")
             body = json.loads(self.rfile.read(length) or b"{}")
-            if action == "config":
+            if action == "setup":
+                picked = tutor.setup(str(body.get("provider", "")), str(body.get("api_key", "")), str(body.get("model", "")).strip())
+                self._send_json({**tutor.status(), "picked": picked["model"]})
+            elif action == "config":
                 tutor.save_config(str(body.get("provider", "")), str(body.get("model", "")).strip(),
                                   str(body.get("api_key", "")).strip(), str(body.get("base_url", "")).strip())
                 self._send_json(tutor.status())

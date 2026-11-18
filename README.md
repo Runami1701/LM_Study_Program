@@ -38,12 +38,16 @@ reading, or press **Check with the tutor** under a think-question to have your a
 (the verdict appears under that question). The tutor sees the lesson but not its solution, and
 gives hints rather than finished code.
 
-Set it up once with the gear button in the tutor column:
+**Setup (once).** Open the tutor column. Until the tutor is set up, it shows a setup card.
+Pick **one** of the two (you do not need both):
 
-- **OpenRouter**: free models in the cloud. Get a free API key at https://openrouter.ai/keys;
-  the form lists the models that are free right now.
-- **Ollama**: a small model on your own computer, no key, works offline. Install it from
-  https://ollama.com, then run `ollama pull qwen2.5:3b`.
+- **OpenRouter** (free, online): open https://openrouter.ai/keys, sign in, press *Create key*,
+  copy the key, paste it into the box **"Paste your key here"** in the setup card, press
+  **Connect**. The tutor picks a free model and tests it.
+- **Ollama** (on your computer, no key, offline): install it from https://ollama.com/download,
+  run `ollama pull qwen2.5:3b` once in a terminal (about 2 GB), then press **Connect**.
+
+To change it later, press the gear in the tutor column. In a terminal: `python -m course tutor`.
 
 Chats are saved in `tutor_memory/` on your computer (not in git). Long chats are folded into
 a running summary the tutor keeps reading. **Summary for another AI** writes

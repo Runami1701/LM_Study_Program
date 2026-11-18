@@ -39,7 +39,7 @@
     <div class="tutor-head">
       <div><div class="tutor-title">Tutor</div><div class="tutor-sub" id="tutor-sub"></div></div>
       <div class="row">
-        <button class="icon-btn" type="button" id="tutor-gear" aria-label="Tutor settings" aria-expanded="false">
+        <button class="icon-btn" type="button" id="tutor-gear" aria-label="Change the tutor setup" title="Change the tutor setup" aria-expanded="false">
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </button>
         <button class="icon-btn" type="button" id="tutor-close" aria-label="Close the tutor">
@@ -47,24 +47,41 @@
         </button>
       </div>
     </div>
-    <form id="tutor-settings" class="tutor-settings" hidden>
-      <label for="t-provider">Model service</label>
-      <select id="t-provider">
-        <option value="openrouter">OpenRouter (free models, needs a free key)</option>
-        <option value="ollama">Ollama (a small model on this computer)</option>
-      </select>
-      <div id="t-key-row">
-        <label for="t-key">OpenRouter API key</label>
-        <input id="t-key" type="password" autocomplete="off" placeholder="sk-or-...">
-        <div class="tutor-hint">Get a free key at openrouter.ai/keys. It is saved only in <code>tutor.json</code> on this computer.</div>
+    <div id="tutor-setup" class="tutor-setup" hidden>
+      <div class="setup-title">Set up the tutor</div>
+      <p class="setup-text">Pick <b>one</b>. You do not need both.</p>
+      <div class="choice-row" role="group" aria-label="Choose a model service">
+        <button type="button" class="choice" data-prov="openrouter" aria-pressed="false"><b>OpenRouter</b><span>Free, online. You paste one free key.</span></button>
+        <button type="button" class="choice" data-prov="ollama" aria-pressed="false"><b>Ollama</b><span>Runs on your computer. No key, works offline.</span></button>
       </div>
-      <label for="t-model">Model</label>
-      <input id="t-model" list="t-models" autocomplete="off">
-      <datalist id="t-models"></datalist>
-      <div class="tutor-hint" id="t-model-hint"></div>
-      <div class="row"><button class="btn small primary" type="submit">Save</button><button class="btn small" type="button" id="t-cancel">Cancel</button></div>
-      <div class="tutor-hint" id="t-msg" role="status"></div>
-    </form>
+
+      <ol class="setup-steps" id="setup-openrouter" hidden>
+        <li>Open <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>, sign in (free), press <b>Create key</b>, and copy the key.</li>
+        <li><label for="t-key">Paste your key here:</label>
+          <input id="t-key" type="password" autocomplete="off" placeholder="sk-or-v1-...">
+          <span class="tutor-hint" id="t-key-saved"></span></li>
+        <li>Press <b>Connect</b>. The tutor picks a free model and tests it.</li>
+      </ol>
+
+      <ol class="setup-steps" id="setup-ollama" hidden>
+        <li>Download and install Ollama from <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>, then start it.</li>
+        <li>Open a terminal once and run this (it downloads a small model, about 2 GB):
+          <span class="cmd-line"><code>ollama pull qwen2.5:3b</code><button class="btn small" type="button" id="copy-pull">Copy</button></span></li>
+        <li>Press <b>Connect</b>. <span class="tutor-hint" id="ollama-state"></span></li>
+      </ol>
+
+      <div class="row setup-actions" id="setup-actions" hidden>
+        <button class="btn primary" type="button" id="setup-connect">Connect</button>
+        <button class="btn small" type="button" id="setup-cancel">Cancel</button>
+      </div>
+      <div class="setup-msg" id="setup-msg" role="status"></div>
+      <details class="setup-more" id="setup-more" hidden>
+        <summary>Use a different model (optional)</summary>
+        <label for="t-model">Model name</label>
+        <input id="t-model" list="t-models" autocomplete="off" placeholder="leave empty to choose automatically">
+        <datalist id="t-models"></datalist>
+      </details>
+    </div>
     <div class="tutor-log" id="tutor-log" aria-live="polite"></div>
     <form id="tutor-form" class="tutor-form">
       <textarea id="tutor-input" rows="3" placeholder="Ask about this lesson… (Enter sends, Shift+Enter for a new line)" aria-label="Your question"></textarea>

@@ -158,25 +158,21 @@ def cmd_tutor(args) -> int:
         except tutor.TutorError as exc:
             print(f"Tutor test failed: {exc}")
             return 1
-    print("1) OpenRouter: free models in the cloud (needs a free key from https://openrouter.ai/keys)")
-    print("2) Ollama: a small model on this computer (install from https://ollama.com, then: ollama pull qwen2.5:3b)")
-    choice = input("Choose 1 or 2: ").strip()
-    provider = {"1": "openrouter", "2": "ollama"}.get(choice)
+    print("Pick one (you only need one):")
+    print("  1) OpenRouter: free, online. You need a free key from https://openrouter.ai/keys")
+    print("  2) Ollama: on this computer, no key. Install from https://ollama.com/download, then run: ollama pull qwen2.5:3b")
+    provider = {"1": "openrouter", "2": "ollama"}.get(input("Type 1 or 2: ").strip())
     if not provider:
         print("Cancelled.")
         return 1
-    key = ""
-    if provider == "openrouter":
-        key = getpass("OpenRouter API key (hidden; Enter keeps the saved one): ").strip()
-        try:
-            free = tutor.free_openrouter_models()
-            print("Free models right now:", ", ".join(free[:12]) + (" ..." if len(free) > 12 else ""))
-        except Exception:
-            pass
-    default = tutor.PROVIDERS[provider]["default_model"]
-    model = input(f"Model [{default}]: ").strip() or default
-    tutor.save_config(provider, model, key)
-    print(f"Saved to {tutor.CONFIG_PATH.name}. Test it with: python -m course tutor --test")
+    key = getpass("Paste your OpenRouter key (hidden), then press Enter: ").strip() if provider == "openrouter" else ""
+    print("Connecting and testing ...")
+    try:
+        picked = tutor.setup(provider, key)
+    except tutor.TutorError as exc:
+        print(f"Not connected: {exc}")
+        return 1
+    print(f"Connected. The tutor uses {picked['model']}.")
     return 0
 
 

@@ -161,6 +161,80 @@ def free_openrouter_models() -> list[str]:
     return sorted(free)
 
 
+# ----------------------------------------------------------------- easy setup
+
+# Free OpenRouter models to try first, in order; any other free model is tried after these.
+PREFERRED_FREE = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "qwen/qwen-2.5-72b-instruct:free",
+    "mistralai/mistral-small-3.1-24b-instruct:free",
+    "google/gemma-3-27b-it:free",
+]
+PREFERRED_LOCAL = ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "llama3.1:8b", "gemma2:2b", "phi3"]
+
+
+def ollama_status() -> dict:
+    """Is Ollama running on this computer, and which models has it downloaded?"""
+    try:
+        with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3) as resp:
+            models = [m["name"] for m in json.loads(resp.read().decode("utf-8")).get("models", [])]
+        return {"running": True, "models": models}
+    except (urllib.error.URLError, OSError, ValueError):
+        return {"running": False, "models": []}
+
+
+def _try(cfg: dict) -> None:
+    chat([{"role": "user", "content": "Reply with the single word OK."}], cfg, max_tokens=5)
+
+
+def setup(provider: str, api_key: str = "", model: str = "") -> dict:
+    """Connect a service: pick a model that answers, test it, save it. Raises TutorError
+    with a plain next step when something is missing."""
+    if provider == "openrouter":
+        old = load_config()
+        key = api_key.strip() or (old.get("api_key", "") if old.get("provider") == "openrouter" else "")
+        if not key:
+            raise TutorError("Paste your OpenRouter key into the box first. It starts with sk-or-.")
+        candidates = [model] if model else []
+        if not model:
+            try:
+                free = free_openrouter_models()
+            except (urllib.error.URLError, OSError, ValueError):
+                free = []
+            candidates = [m for m in PREFERRED_FREE if not free or m in free] + [m for m in free if m not in PREFERRED_FREE]
+        last = None
+        for m in candidates[:8]:
+            cfg = {"provider": "openrouter", "base_url": PROVIDERS["openrouter"]["base_url"], "model": m, "api_key": key}
+            try:
+                _try(cfg)
+            except TutorError as exc:
+                if "rejected" in str(exc):
+                    raise TutorError("OpenRouter did not accept this key. Copy it again from openrouter.ai/keys and paste it.") from exc
+                last = exc
+                continue
+            save_config("openrouter", m, key)
+            return {"model": m}
+        raise TutorError(f"None of the free models answered right now ({last}). Wait a minute and press Connect again.")
+
+    if provider == "ollama":
+        st = ollama_status()
+        if not st["running"]:
+            raise TutorError("Ollama is not running. Install it from ollama.com/download, start it, then press Connect again.")
+        if not st["models"]:
+            raise TutorError("Ollama is running but has no model yet. In a terminal, run:  ollama pull qwen2.5:3b  (about 2 GB), then press Connect again.")
+        if model:
+            pick = model
+        else:
+            pick = next((m for pref in PREFERRED_LOCAL for m in st["models"] if m == pref or m.startswith(pref + "-") or m == pref + ":latest"), st["models"][0])
+        cfg = {"provider": "ollama", "base_url": PROVIDERS["ollama"]["base_url"], "model": pick, "api_key": ""}
+        _try(cfg)
+        save_config("ollama", pick)
+        return {"model": pick}
+
+    raise TutorError("Choose OpenRouter or Ollama.")
+
+
 # --------------------------------------------------------------------- lessons
 
 def lesson_context(lesson_id: str, limit: int = 9000) -> str:
