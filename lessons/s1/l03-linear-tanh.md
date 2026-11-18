@@ -61,6 +61,8 @@ A Python function can return two values as a tuple: `return out, cache`. The cal
 :::
 
 ::: concept
+**See it drawn:** the <a href="explainers/matrices-attention.html#batch" target="_blank" rel="noopener">visual companion</a>, sections 2 and 3: the matrix product, and a whole batch through a linear layer. Click the cells and tokens; every number is recomputed live.
+
 ### The linear layer
 
 A linear layer (strictly, an *affine* layer) maps each input row to an output row:

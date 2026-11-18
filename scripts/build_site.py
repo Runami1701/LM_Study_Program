@@ -34,6 +34,7 @@ OUT = ROOT / "site" / "build" / "index.html"
 WATCH = [
     ROOT / "lessons",
     ROOT / "site" / "src",
+    ROOT / "site" / "explainers",
     ROOT / "templates",
     ROOT / "solutions",
     ROOT / "scripts" / "build_site.py",
@@ -157,7 +158,22 @@ def build() -> Path:
         page = page.replace(key, value)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(page, encoding="utf-8")
+    build_explainers()
     return OUT
+
+
+def build_explainers() -> None:
+    """Wrap each visual explainer (an HTML fragment in site/explainers/) into a full page."""
+    dst = OUT.parent / "explainers"
+    dst.mkdir(exist_ok=True)
+    for src in sorted((ROOT / "site" / "explainers").glob("*.html")):
+        body = _read(src)
+        (dst / src.name).write_text(
+            '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+            "</head>\n<body>\n" + body + "\n</body>\n</html>\n",
+            encoding="utf-8",
+        )
 
 
 if __name__ == "__main__":

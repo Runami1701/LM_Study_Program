@@ -1,0 +1,463 @@
+<title>Matrices and Attention</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column on graph paper; each idea is a "sheet" with a live diagram and its controls. */
+:root {
+  --paper: #f7f8f6; --sheet: #ffffff; --ink: #1d2433; --muted: #5d6677; --grid: #e3e8ee; --rule: #cfd6df;
+  --row: #2f6fdf; --row-soft: #dce8fd; --col: #d9822b; --col-soft: #fbe9d6;
+  --q: #c2410c; --k: #0f766e; --v: #7c3aed; --q-soft: #fde4d6; --k-soft: #d3f0ec; --v-soft: #ebe1fd;
+  --heat: 47, 111, 223; --mask: #eceef1;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #12161c; --sheet: #1a1f27; --ink: #e5e9ef; --muted: #9aa4b3; --grid: #232a34; --rule: #313a47;
+  --row: #6ea0ff; --row-soft: #1f3152; --col: #f0a35c; --col-soft: #3f2c19;
+  --q: #fb8a55; --k: #4fd1c0; --v: #b28cff; --q-soft: #43271b; --k-soft: #163a37; --v-soft: #2d2346;
+  --heat: 110, 160, 255; --mask: #252b34; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #12161c; --sheet: #1a1f27; --ink: #e5e9ef; --muted: #9aa4b3; --grid: #232a34; --rule: #313a47;
+  --row: #6ea0ff; --row-soft: #1f3152; --col: #f0a35c; --col-soft: #3f2c19;
+  --q: #fb8a55; --k: #4fd1c0; --v: #b28cff; --q-soft: #43271b; --k-soft: #163a37; --v-soft: #2d2346;
+  --heat: 110, 160, 255; --mask: #252b34; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.6 var(--body);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header h1 { font: 700 clamp(2rem, 5vw, 3rem)/1.1 var(--display); margin: 0 0 10px; text-wrap: balance; letter-spacing: -0.01em; }
+header p { color: var(--muted); max-width: 62ch; margin: 0; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.toc a { font: 600 13px var(--body); color: var(--ink); text-decoration: none; border: 1px solid var(--rule); background: var(--sheet); padding: 5px 10px; border-radius: 999px; }
+.toc a:hover, .toc a:focus-visible { border-color: var(--row); }
+section.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 26px clamp(16px, 4vw, 32px); margin-top: 28px; }
+.eyebrow { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h2 { font: 700 1.6rem/1.2 var(--display); margin: 4px 0 12px; text-wrap: balance; }
+p { max-width: 66ch; margin: 0 0 12px; }
+code, .m { font-family: var(--mono); font-size: .88em; }
+.note { color: var(--muted); font-size: 15px; }
+.stage { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin: 18px 0 10px; overflow-x: auto; padding-bottom: 4px; }
+.op { font: 600 22px var(--mono); color: var(--muted); }
+.mat-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mat-label { font: 600 13px var(--mono); color: var(--muted); }
+.mat { display: grid; gap: 3px; padding: 6px; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); border-radius: 6px; }
+.cell { min-width: 40px; height: 36px; display: flex; align-items: center; justify-content: center; font: 500 14px var(--mono);
+  border-radius: 4px; background: var(--paper); border: 1px solid var(--grid); transition: background .15s, color .15s; font-variant-numeric: tabular-nums; }
+.cell.click { cursor: pointer; }
+.cell.click:hover, .cell.click:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.cell.r { background: var(--row-soft); border-color: var(--row); }
+.cell.c { background: var(--col-soft); border-color: var(--col); }
+.cell.hit { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.cell.small { min-width: 30px; height: 28px; font-size: 12.5px; }
+input.cell { width: 52px; text-align: center; color: var(--ink); padding: 0 2px; -moz-appearance: textfield; }
+input.cell::-webkit-outer-spin-button, input.cell::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.cell:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+.hint-line { font: 600 13px var(--body); color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.hint-line::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--row); }
+svg .handle { cursor: grab; } svg .handle:active { cursor: grabbing; }
+svg { touch-action: none; }
+.idx { font: 500 11px var(--mono); color: var(--muted); }
+.calc { font: 500 15px var(--mono); background: var(--paper); border: 1px dashed var(--rule); border-radius: 6px; padding: 10px 14px; margin: 8px 0 4px; overflow-x: auto; white-space: nowrap; }
+.calc .a { color: var(--row); font-weight: 600; } .calc .b { color: var(--col); font-weight: 600; }
+.shape-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font: 600 15px var(--mono); margin: 10px 0; }
+.chip { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--paper); }
+.chip.inner { border-color: var(--col); background: var(--col-soft); }
+.chip.outer { border-color: var(--row); background: var(--row-soft); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 12px 0; }
+button.btn { font: 600 14px var(--body); padding: 7px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); cursor: pointer; }
+button.btn[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+button.btn:focus-visible, input:focus-visible { outline: 2px solid var(--row); outline-offset: 2px; }
+label.ctl { display: flex; gap: 8px; align-items: center; font: 600 14px var(--body); }
+input[type="range"] { width: 160px; accent-color: var(--row); }
+.tokens { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+.tok { font: 600 15px var(--mono); padding: 6px 12px; border-radius: 6px; border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink); cursor: pointer; }
+.tok[aria-pressed="true"] { border-color: var(--q); background: var(--q-soft); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font: 600 13px var(--body); color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; align-items: start; }
+.two > * { min-width: 0; }
+svg text { font-family: var(--mono); }
+.figure { overflow-x: auto; }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 64px 1fr 56px; gap: 8px; align-items: center; font: 500 13px var(--mono); }
+.bar .track { height: 14px; background: var(--paper); border: 1px solid var(--grid); border-radius: 3px; overflow: hidden; }
+.bar .fill { display: block; height: 100%; background: var(--v); transition: width .25s; }
+.bar.masked { color: var(--muted); }
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 30px 1fr; gap: 10px; }
+.steps li::before { content: counter(s); font: 700 14px var(--mono); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--ink); color: var(--sheet); }
+.heads { display: grid; gap: 4px; font: 500 12px var(--mono); overflow-x: auto; padding-bottom: 4px; }
+.seg { min-width: 560px; }
+.seg { display: flex; gap: 2px; }
+.seg span { flex: 1; text-align: center; padding: 5px 0; border-radius: 3px; color: var(--ink); }
+footer { margin-top: 30px; color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">numpy-lm-course · visual companion</div>
+  <h1>Matrices and attention, drawn out</h1>
+  <p>Every picture here is live: click a cell, a token or a switch, and the numbers are recomputed. The colors keep one meaning throughout: <span style="color:var(--row);font-weight:600">blue = a row</span>, <span style="color:var(--col);font-weight:600">orange = a column</span>, and in attention <span style="color:var(--q);font-weight:600">query</span>, <span style="color:var(--k);font-weight:600">key</span>, <span style="color:var(--v);font-weight:600">value</span>.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#grid">1 · A matrix is a grid</a><a href="#product">2 · Matrix product</a><a href="#batch">3 · A batch through a layer</a>
+    <a href="#dot">4 · Dot product = match</a><a href="#attention">5 · Attention</a><a href="#scale">6 · Why ÷√dₕ</a><a href="#heads">7 · Heads</a>
+  </nav>
+</header>
+
+<section class="sheet" id="grid">
+  <div class="eyebrow">n-l01 · s1-l03</div>
+  <h2>A matrix is a grid with a shape</h2>
+  <p>The array <code>A</code> below has <b>shape (2, 3)</b>: 2 rows, 3 columns. Click any entry to see its index. NumPy counts from 0, so the math entry A<sub>11</sub> is <code>A[0, 0]</code>.</p>
+  <div class="stage"><div class="mat-wrap"><div class="mat-label">A · shape (2, 3)</div><div id="gridA"></div></div></div>
+  <div class="calc" id="gridInfo">Click an entry.</div>
+</section>
+
+<section class="sheet" id="product">
+  <div class="eyebrow">n-l01 · s1-l03 · s1-l06</div>
+  <h2>Matrix product: a row meets a column</h2>
+  <p>Each entry of <code>C = A @ B</code> takes <span style="color:var(--row);font-weight:600">one row of A</span> and <span style="color:var(--col);font-weight:600">one column of B</span>, multiplies them entry by entry, and adds. Click an entry of C, or press Play.</p>
+  <div class="hint-line">Type your own numbers into A and B: C is recomputed as you type.</div>
+  <div class="stage">
+    <div class="mat-wrap"><div class="mat-label">A · (2, 3)</div><div id="pA"></div></div>
+    <div class="op">@</div>
+    <div class="mat-wrap"><div class="mat-label">B · (3, 2)</div><div id="pB"></div></div>
+    <div class="op">=</div>
+    <div class="mat-wrap"><div class="mat-label">C · (2, 2)</div><div id="pC"></div></div>
+  </div>
+  <div class="calc" id="pCalc"></div>
+  <div class="controls"><button class="btn" id="pPlay" aria-pressed="false">Play</button><span class="note">C has one entry for every (row of A, column of B) pair: 2 × 2 = 4 entries, each a sum of 3 products.</span></div>
+  <div class="shape-row" aria-label="shape rule">
+    <span class="chip outer">(2</span><span>,</span><span class="chip inner">3)</span><span class="op" style="font-size:16px">@</span><span class="chip inner">(3</span><span>,</span><span class="chip outer">2)</span><span class="op" style="font-size:16px">→</span><span class="chip outer">(2, 2)</span>
+  </div>
+  <p class="note">The inner sizes must match (each row of A and each column of B have 3 entries) and disappear; the outer sizes give the shape of the result.</p>
+</section>
+
+<section class="sheet" id="batch">
+  <div class="eyebrow">s1-l03 · n-l04</div>
+  <h2>A batch through a linear layer: <code>x @ W + b</code></h2>
+  <p>Each <b>row</b> of <code>x</code> is one example. The same <code>W</code> turns every row into an output row, and broadcasting adds the same bias <code>b</code> to each of them. Click a row of the output.</p>
+  <div class="hint-line">Edit x, W or the first row of b. Change b and watch every output row move together.</div>
+  <div class="stage">
+    <div class="mat-wrap"><div class="mat-label">x · (B=3, n=2)</div><div id="bX"></div></div>
+    <div class="op">@</div>
+    <div class="mat-wrap"><div class="mat-label">W · (2, 3)</div><div id="bW"></div></div>
+    <div class="op">+</div>
+    <div class="mat-wrap"><div class="mat-label">b · (3,) → copied to each row</div><div id="bB"></div></div>
+    <div class="op">=</div>
+    <div class="mat-wrap"><div class="mat-label">out · (3, 3)</div><div id="bO"></div></div>
+  </div>
+  <div class="calc" id="bCalc"></div>
+  <p class="note">The faded rows of b are not stored anywhere: broadcasting reuses the one row for all B rows. In the backward pass this is why the bias gradient is a sum over the batch.</p>
+</section>
+
+<section class="sheet" id="dot">
+  <div class="eyebrow">s2-l04</div>
+  <h2>A dot product measures how well two vectors match</h2>
+  <p>Attention compares vectors with the dot product, q · k = q₁k₁ + q₂k₂. It is large when the arrows point the same way, near 0 when they are at right angles, and negative when they point apart.</p>
+  <div class="hint-line">Drag the tip of either arrow (or use the slider).</div>
+  <div class="two">
+    <div class="figure"><svg id="dotSvg" viewBox="-130 -130 260 260" width="260" height="260" role="img" aria-label="query and key vectors"></svg></div>
+    <div>
+      <div class="controls"><label class="ctl" for="dotAngle">key angle <input type="range" id="dotAngle" min="0" max="360" value="40"></label></div>
+      <div class="calc" id="dotCalc"></div>
+      <p class="note">With unit-length vectors, q · k = cos(angle): 1 when aligned, 0 at 90°, −1 when opposite.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sheet" id="attention">
+  <div class="eyebrow">s2-l04 · s2-l05</div>
+  <h2>Attention, one query at a time</h2>
+  <p>Four tokens, each already turned into a query, a key and a value (here only 2 numbers each, so they can be drawn). Pick a token: its <span style="color:var(--q);font-weight:600">query</span> is compared with every <span style="color:var(--k);font-weight:600">key</span>, the scores go through a softmax, and the output is the weighted mix of the <span style="color:var(--v);font-weight:600">values</span>.</p>
+  <div class="tokens" id="tokBtns" role="group" aria-label="choose the query token"></div>
+  <div class="hint-line">Drag the orange query arrow in the left picture: the scores, weights and output follow live.</div>
+  <div class="controls">
+    <button class="btn" id="maskBtn" aria-pressed="true">Causal mask on</button>
+    <span class="note" id="maskNote"></span>
+  </div>
+  <ol class="steps">
+    <li><div><b>Scores.</b> One row of S = Q Kᵀ / √dₕ: the chosen query dotted with every key. Masked entries (keys after the query) are set to −∞ before the softmax.</div></li>
+    <li><div><b>Softmax.</b> The row becomes weights that are positive and add up to 1.</div></li>
+    <li><div><b>Mix.</b> The output is Σ weightⱼ · vⱼ: an average of the value vectors.</div></li>
+  </ol>
+  <div class="two">
+    <div>
+      <div class="mat-label" style="margin-bottom:6px">scores S (row = query, column = key)</div>
+      <div id="heat"></div>
+      <div class="legend" style="margin-top:8px"><span><span class="sw" style="background:rgba(var(--heat),.85)"></span>high weight</span><span><span class="sw" style="background:var(--mask)"></span>masked (future)</span></div>
+    </div>
+    <div>
+      <div class="mat-label" style="margin-bottom:6px" id="barsTitle">weights of the chosen query</div>
+      <div class="bars" id="bars"></div>
+    </div>
+  </div>
+  <div class="two" style="margin-top:14px">
+    <div class="figure"><div class="mat-label">query vs keys (drag the query)</div><svg id="qkSvg" viewBox="-185 -150 370 300" width="100%" style="max-width:370px" role="img" aria-label="the chosen query and all keys; drag the query"></svg>
+      <div class="legend"><span><span class="sw" style="background:var(--q)"></span>query of the chosen token</span><span><span class="sw" style="background:var(--k)"></span>keys (faded = masked)</span></div></div>
+    <div class="figure"><div class="mat-label">values and the output</div><svg id="vecSvg" viewBox="-185 -150 370 300" width="100%" style="max-width:370px" role="img" aria-label="value vectors and their weighted average"></svg>
+      <div class="legend"><span><span class="sw" style="background:var(--v)"></span>values (thicker = more weight)</span><span><span class="sw" style="background:var(--ink)"></span>output = weighted average</span></div></div>
+  </div>
+  <div class="controls"><button class="btn" id="resetQ">Reset the queries</button></div>
+</section>
+
+<section class="sheet" id="scale">
+  <div class="eyebrow">s2-l04</div>
+  <h2>Why the scores are divided by √dₕ</h2>
+  <p>With longer vectors, dot products of random entries grow: their spread is about √dₕ. Large scores push the softmax toward one winner, and the other keys then get almost no weight and almost no gradient. Move dₕ and compare one row of weights with and without the division.</p>
+  <div class="controls"><label class="ctl" for="dh">dₕ = <span id="dhVal" class="m">16</span><input type="range" id="dh" min="1" max="8" value="4"></label><button class="btn" id="reroll">New random vectors</button></div>
+  <div class="two">
+    <div><div class="mat-label">without ÷√dₕ</div><div class="bars" id="rawBars"></div></div>
+    <div><div class="mat-label">with ÷√dₕ</div><div class="bars" id="scBars"></div></div>
+  </div>
+  <p class="note" id="scaleNote"></p>
+</section>
+
+<section class="sheet" id="heads">
+  <div class="eyebrow">s2-l06</div>
+  <h2>Multi-head: the same vector, cut into heads</h2>
+  <p>With d = 8 and h = 2 heads, each position's query, key and value vectors are cut into 2 pieces of dₕ = 4. Each head runs the attention above on its own pieces; then the pieces are joined again. A reshape cuts, a transpose moves the head axis next to the batch.</p>
+  <div class="heads" id="headsFig"></div>
+  <div class="calc">(B, T, 3d) → reshape (B, T, 3, h, dₕ) → transpose (3, B, h, T, dₕ) → q, k, v each (B, h, T, dₕ)</div>
+</section>
+
+<footer>Drawn for the numpy-lm-course. The numbers in each picture come from the formulas in the lessons, computed live in your browser.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const fmt = (x, d = 2) => (Math.abs(x) < 1e-9 ? 0 : x).toFixed(d).replace(/\.?0+$/, "") || "0";
+
+  function grid(el, M, opts = {}) {
+    el.innerHTML = "";
+    const g = document.createElement("div");
+    g.className = "mat";
+    g.style.gridTemplateColumns = `repeat(${M[0].length}, auto)`;
+    M.forEach((row, i) => row.forEach((v, j) => {
+      const c = document.createElement(opts.click ? "button" : "div");
+      c.className = "cell" + (opts.small ? " small" : "") + (opts.click ? " click" : "");
+      c.textContent = typeof v === "number" ? fmt(v) : v;
+      c.dataset.i = i; c.dataset.j = j;
+      if (opts.style) Object.assign(c.style, opts.style(i, j, v) || {});
+      if (opts.click) { c.type = "button"; c.addEventListener("click", () => opts.click(i, j)); c.setAttribute("aria-label", `row ${i}, column ${j}: ${c.textContent}`); }
+      g.appendChild(c);
+    }));
+    el.appendChild(g);
+    return g;
+  }
+  // An editable matrix: one number input per entry; onChange runs after every edit.
+  function editGrid(el, M, onChange, opts = {}) {
+    el.innerHTML = "";
+    const g = document.createElement("div");
+    g.className = "mat";
+    g.style.gridTemplateColumns = `repeat(${M[0].length}, auto)`;
+    M.forEach((row, i) => row.forEach((v, j) => {
+      const c = document.createElement("input");
+      c.className = "cell"; c.type = "number"; c.step = "any"; c.value = v;
+      c.id = `${el.id}-${i}-${j}`; c.dataset.i = i; c.dataset.j = j;
+      c.setAttribute("aria-label", `${el.id} row ${i}, column ${j}`);
+      if (opts.style) Object.assign(c.style, opts.style(i, j) || {});
+      if (opts.readonly && opts.readonly(i, j)) { c.readOnly = true; c.tabIndex = -1; }
+      c.addEventListener("input", () => { const x = parseFloat(c.value); if (Number.isFinite(x)) { M[i][j] = x; onChange(i, j); } });
+      g.appendChild(c);
+    }));
+    el.appendChild(g);
+  }
+  const cells = (el) => Array.from(el.querySelectorAll(".cell"));
+  const mark = (el, f) => cells(el).forEach((c) => { c.classList.remove("r", "c", "hit"); const k = f(+c.dataset.i, +c.dataset.j); if (k) c.classList.add(k); });
+
+  // 1. grid
+  const A0 = [[1, 2, 3], [4, 5, 6]];
+  const gridEl = $("#gridA");
+  function pickGrid(i, j) {
+    mark(gridEl, (a, b) => (a === i && b === j ? "hit" : a === i ? "r" : b === j ? "c" : ""));
+    $("#gridInfo").innerHTML = `A[${i}, ${j}] = ${A0[i][j]} &nbsp;·&nbsp; <span style="color:var(--row)">row ${i}</span>, <span style="color:var(--col)">column ${j}</span> &nbsp;·&nbsp; math writes it A<sub>${i + 1}${j + 1}</sub>`;
+  }
+  grid(gridEl, A0, { click: pickGrid });
+  pickGrid(1, 2);
+
+  // 2. product
+  const PA = [[1, 2, 3], [4, 5, 6]], PB = [[7, 8], [9, 10], [11, 12]];
+  let PC = [];
+  const prodC = () => PA.map((r) => PB[0].map((_, j) => r.reduce((s, a, k) => s + a * PB[k][j], 0)));
+  let cur = [0, 0];
+  function redrawProd() { PC = prodC(); grid($("#pC"), PC, { click: pickProd }); pickProd(cur[0], cur[1]); }
+  editGrid($("#pA"), PA, redrawProd); editGrid($("#pB"), PB, redrawProd);
+  function pickProd(i, j) {
+    cur = [i, j];
+    mark($("#pA"), (a) => (a === i ? "r" : ""));
+    mark($("#pB"), (_, b) => (b === j ? "c" : ""));
+    mark($("#pC"), (a, b) => (a === i && b === j ? "hit" : ""));
+    const terms = PA[i].map((a, k) => `<span class="a">${fmt(a)}</span>·<span class="b">${fmt(PB[k][j])}</span>`).join(" + ");
+    $("#pCalc").innerHTML = `C[${i}, ${j}] = ${terms} = ${PA[i].map((a, k) => fmt(a * PB[k][j])).join(" + ")} = <b>${fmt(PC[i][j])}</b>`;
+  }
+  redrawProd();
+  let timer = null;
+  $("#pPlay").addEventListener("click", (e) => {
+    const b = e.currentTarget;
+    if (timer) { clearInterval(timer); timer = null; b.textContent = "Play"; b.setAttribute("aria-pressed", "false"); return; }
+    b.textContent = "Pause"; b.setAttribute("aria-pressed", "true");
+    timer = setInterval(() => { const n = (cur[0] * 2 + cur[1] + 1) % 4; pickProd(Math.floor(n / 2), n % 2); }, 1400);
+  });
+
+  // 3. batch
+  const X = [[1, 2], [0, -1], [3, 1]], W = [[1, 0, -1], [2, 1, 0.5]], bias = [0.5, -1, 0];
+  let O = [], bRow = 0;
+  const B3 = [bias, bias, bias];
+  function redrawBatch() {
+    O = X.map((r) => W[0].map((_, j) => r[0] * W[0][j] + r[1] * W[1][j] + bias[j]));
+    grid($("#bO"), O, { click: (i) => pickBatch(i) });
+    cells($("#bB")).forEach((c) => { if (+c.dataset.i > 0) c.value = bias[+c.dataset.j]; });
+    pickBatch(bRow);
+  }
+  function pickBatch(i) {
+    bRow = i;
+    mark($("#bX"), (a) => (a === i ? "r" : ""));
+    mark($("#bO"), (a) => (a === i ? "r" : ""));
+    mark($("#bB"), (a) => (a === i ? "c" : ""));
+    $("#bCalc").innerHTML = `row ${i}: [${X[i].map((v) => fmt(v)).join(", ")}] @ W + [${bias.map((v) => fmt(v)).join(", ")}] = [${O[i].map((v) => fmt(v)).join(", ")}]`;
+  }
+  editGrid($("#bX"), X, (i) => { bRow = i; redrawBatch(); });
+  editGrid($("#bW"), W, redrawBatch);
+  editGrid($("#bB"), B3, redrawBatch, { style: (i) => (i === 0 ? {} : { opacity: 0.45 }), readonly: (i) => i > 0 });
+  redrawBatch();
+
+  // SVG helpers
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+  function axes(svg, R) {
+    el("line", { x1: -R, y1: 0, x2: R, y2: 0, stroke: "var(--rule)", "stroke-width": 1 }, svg);
+    el("line", { x1: 0, y1: -R, x2: 0, y2: R, stroke: "var(--rule)", "stroke-width": 1 }, svg);
+  }
+  function arrow(svg, x, y, color, width, label, dash) {
+    const len = Math.hypot(x, y) || 1, ux = x / len, uy = y / len;
+    el("line", { x1: 0, y1: 0, x2: x - ux * 8, y2: -(y - uy * 8), stroke: color, "stroke-width": width, "stroke-linecap": "round", "stroke-dasharray": dash || "" }, svg);
+    el("polygon", { points: `${x},${-y} ${x - ux * 12 - uy * 6},${-(y - uy * 12 + ux * 6)} ${x - ux * 12 + uy * 6},${-(y - uy * 12 - ux * 6)}`, fill: color }, svg);
+    if (label) { const t = el("text", { x: x + ux * 10, y: -(y + uy * 10), fill: color, "font-size": 13, "font-weight": 600, "text-anchor": ux < -0.3 ? "end" : "start", "dominant-baseline": "middle" }, svg); t.textContent = label; }
+  }
+
+  // Drag support: calls onMove(x, y) in math coordinates (y up) while the pointer is down.
+  function draggable(svg, onMove) {
+    let active = false;
+    const toMath = (e) => { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const m = pt.matrixTransform(svg.getScreenCTM().inverse()); return [m.x, -m.y]; };
+    svg.addEventListener("pointerdown", (e) => { if (!e.target.closest(".handle")) return; active = true; svg.setPointerCapture(e.pointerId); e.preventDefault(); });
+    svg.addEventListener("pointermove", (e) => { if (active) onMove(...toMath(e)); });
+    const stop = () => { active = false; };
+    svg.addEventListener("pointerup", stop); svg.addEventListener("pointercancel", stop);
+  }
+  function handle(svg, x, y, color) { el("circle", { class: "handle", cx: x, cy: -y, r: 13, fill: color, "fill-opacity": 0.18, stroke: color, "stroke-width": 2 }, svg); }
+
+  // 4. dot product
+  let qAng = Math.atan2(0.35, 1), dragDot = null;
+  function drawDot() {
+    const svg = $("#dotSvg"); svg.innerHTML = ""; axes(svg, 120);
+    const a = (+$("#dotAngle").value * Math.PI) / 180;
+    const qu = [Math.cos(qAng), Math.sin(qAng)], k = [Math.cos(a), Math.sin(a)];
+    el("circle", { cx: 0, cy: 0, r: 90, fill: "none", stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    arrow(svg, qu[0] * 90, qu[1] * 90, "var(--q)", 3.5, "q");
+    arrow(svg, k[0] * 90, k[1] * 90, "var(--k)", 3.5, "k");
+    handle(svg, qu[0] * 90, qu[1] * 90, "var(--q)"); svg.lastChild.dataset.v = "q";
+    handle(svg, k[0] * 90, k[1] * 90, "var(--k)"); svg.lastChild.dataset.v = "k";
+    const d = qu[0] * k[0] + qu[1] * k[1];
+    $("#dotCalc").innerHTML = `q = [${fmt(qu[0])}, ${fmt(qu[1])}] &nbsp; k = [${fmt(k[0])}, ${fmt(k[1])}]<br>q · k = ${fmt(qu[0])}·${fmt(k[0])} + ${fmt(qu[1])}·${fmt(k[1])} = <b>${fmt(d)}</b>`;
+  }
+  $("#dotAngle").addEventListener("input", drawDot);
+  $("#dotSvg").addEventListener("pointerdown", (e) => { const h = e.target.closest(".handle"); dragDot = h ? h.dataset.v : null; });
+  draggable($("#dotSvg"), (x, y) => {
+    const ang = Math.atan2(y, x);
+    if (dragDot === "q") qAng = ang; else $("#dotAngle").value = Math.round(((ang * 180) / Math.PI + 360) % 360);
+    drawDot();
+  });
+  drawDot();
+
+  // 5. attention
+  const toks = ["the", "cat", "sat", "down"];
+  const Q0 = [[1.0, 0.2], [0.3, 1.1], [1.2, 0.9], [-0.4, 1.0]];
+  const Q = Q0.map((r) => r.slice());
+  const K = [[0.9, -0.3], [0.2, 1.3], [1.0, 0.6], [-0.8, 0.9]];
+  const V = [[1.0, 0.1], [0.1, 1.0], [-0.6, 0.6], [-0.4, -0.9]];
+  const dh = 2, sc = 1 / Math.sqrt(dh);
+  let qi = 2, causal = true;
+  const softmax = (row) => { const m = Math.max(...row.filter(Number.isFinite)); const e = row.map((x) => (Number.isFinite(x) ? Math.exp(x - m) : 0)); const s = e.reduce((a, b) => a + b, 0); return e.map((x) => x / s); };
+  function scores() { return Q.map((q, i) => K.map((k, j) => (causal && j > i ? -Infinity : (q[0] * k[0] + q[1] * k[1]) * sc))); }
+  const btns = $("#tokBtns");
+  toks.forEach((t, i) => { const b = document.createElement("button"); b.type = "button"; b.className = "tok"; b.textContent = t; b.addEventListener("click", () => { qi = i; drawAtt(); }); btns.appendChild(b); });
+  $("#maskBtn").addEventListener("click", (e) => { causal = !causal; e.currentTarget.setAttribute("aria-pressed", String(causal)); e.currentTarget.textContent = causal ? "Causal mask on" : "Causal mask off"; drawAtt(); });
+  function drawAtt() {
+    Array.from(btns.children).forEach((b, i) => b.setAttribute("aria-pressed", String(i === qi)));
+    $("#maskNote").textContent = causal ? `"${toks[qi]}" may only look at itself and earlier tokens.` : "Every token sees every other token, including later ones (only allowed when nothing is being predicted).";
+    const S = scores(), P = S.map(softmax);
+    const H = S.map((r) => r.map((x) => (Number.isFinite(x) ? x : "−∞")));
+    const heat = grid($("#heat"), [["", ...toks], ...H.map((r, i) => [toks[i], ...r])], {
+      small: true,
+      style: (i, j) => {
+        if (i === 0 || j === 0) return { background: "transparent", border: "none", fontWeight: (i - 1 === qi || (i === 0 && false)) ? "700" : "500", color: i - 1 === qi ? "var(--q)" : "var(--muted)" };
+        const w = P[i - 1][j - 1], masked = !Number.isFinite(S[i - 1][j - 1]);
+        return { background: masked ? "var(--mask)" : `rgba(var(--heat), ${0.08 + 0.8 * w})`, color: masked ? "var(--muted)" : w > 0.45 ? "#fff" : "var(--ink)", outline: i - 1 === qi ? "2px solid var(--q)" : "none" };
+      },
+    });
+    heat.style.gridTemplateColumns = "auto repeat(4, auto)";
+    $("#barsTitle").innerHTML = `weights of <span style="color:var(--q)">"${toks[qi]}"</span> (softmax of its row)`;
+    $("#bars").innerHTML = P[qi].map((w, j) => {
+      const masked = !Number.isFinite(S[qi][j]);
+      return `<div class="bar${masked ? " masked" : ""}"><span>${toks[j]}</span><span class="track"><span class="fill" style="width:${(w * 100).toFixed(1)}%"></span></span><span>${masked ? "masked" : w.toFixed(3)}</span></div>`;
+    }).join("");
+    const qk = $("#qkSvg"); qk.innerHTML = ""; axes(qk, 140);
+    const s = 80;
+    K.forEach((k, j) => { const masked = !Number.isFinite(S[qi][j]); arrow(qk, k[0] * s, k[1] * s, masked ? "var(--rule)" : "var(--k)", 2.5, `${toks[j]} ${masked ? "(masked)" : fmt(S[qi][j])}`, masked ? "4 4" : ""); });
+    arrow(qk, Q[qi][0] * s, Q[qi][1] * s, "var(--q)", 3.5, `q(${toks[qi]})`);
+    handle(qk, Q[qi][0] * s, Q[qi][1] * s, "var(--q)");
+    const svg = $("#vecSvg"); svg.innerHTML = ""; axes(svg, 140);
+    const sv = 95;
+    V.forEach((v, j) => { const w = P[qi][j]; arrow(svg, v[0] * sv, v[1] * sv, "var(--v)", 1 + 7 * w, toks[j], w < 1e-6 ? "4 4" : ""); });
+    const out = [0, 1].map((d) => V.reduce((a, v, j) => a + P[qi][j] * v[d], 0));
+    arrow(svg, out[0] * sv, out[1] * sv, "var(--ink)", 3.5, "");
+    const ot = el("text", { x: -180, y: 140, fill: "var(--ink)", "font-size": 12, "font-weight": 600 }, svg);
+    ot.textContent = `output = [${fmt(out[0])}, ${fmt(out[1])}]`;
+  }
+  draggable($("#qkSvg"), (x, y) => {
+    const lim = 1.7;
+    Q[qi] = [Math.max(-lim, Math.min(lim, x / 80)), Math.max(-lim, Math.min(lim, y / 80))];
+    drawAtt();
+  });
+  $("#resetQ").addEventListener("click", () => { Q0.forEach((r, i) => (Q[i] = r.slice())); drawAtt(); });
+  drawAtt();
+
+  // 6. scale
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const gauss = () => { const u = Math.max(rnd(), 1e-9), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  let qv = [], kv = [];
+  function roll() { qv = Array.from({ length: 256 }, gauss); kv = Array.from({ length: 6 }, () => Array.from({ length: 256 }, gauss)); }
+  function drawScale() {
+    const d = 2 ** +$("#dh").value; $("#dhVal").textContent = d;
+    const raw = kv.map((k) => k.slice(0, d).reduce((a, x, i) => a + x * qv[i], 0));
+    const pr = softmax(raw), ps = softmax(raw.map((x) => x / Math.sqrt(d)));
+    const bars = (p) => p.map((w, j) => `<div class="bar"><span>key ${j}</span><span class="track"><span class="fill" style="width:${(w * 100).toFixed(1)}%"></span></span><span>${w.toFixed(3)}</span></div>`).join("");
+    $("#rawBars").innerHTML = bars(pr); $("#scBars").innerHTML = bars(ps);
+    const spread = Math.sqrt(raw.reduce((a, x) => a + x * x, 0) / raw.length);
+    $("#scaleNote").innerHTML = `These raw scores spread about ±${spread.toFixed(1)} (theory: √${d} = ${Math.sqrt(d).toFixed(1)}). Largest weight without the division: <b>${Math.max(...pr).toFixed(3)}</b>; with it: <b>${Math.max(...ps).toFixed(3)}</b>.`;
+  }
+  $("#dh").addEventListener("input", drawScale);
+  $("#reroll").addEventListener("click", () => { roll(); drawScale(); });
+  roll(); drawScale();
+
+  // 7. heads
+  const colors = { q: "var(--q-soft)", k: "var(--k-soft)", v: "var(--v-soft)" };
+  const border = { q: "var(--q)", k: "var(--k)", v: "var(--v)" };
+  let h = `<div class="mat-label">one position's projection: 3d = 24 numbers</div><div class="seg">`;
+  ["q", "k", "v"].forEach((p) => { for (let i = 0; i < 8; i++) h += `<span style="background:${colors[p]};outline:${i === 4 ? `2px solid ${border[p]}` : "none"}">${p}${i < 4 ? "₀" : "₁"}</span>`; });
+  h += `</div><div class="mat-label" style="margin-top:10px">after reshape and transpose: head 0 and head 1 each get their own q, k, v of 4 numbers</div>`;
+  [0, 1].forEach((hd) => { h += `<div class="seg"><span style="flex:0 0 70px;text-align:left;color:var(--muted)">head ${hd}</span>`; ["q", "k", "v"].forEach((p) => { for (let i = 0; i < 4; i++) h += `<span style="background:${colors[p]}">${p}${hd ? "₁" : "₀"}</span>`; h += `<span style="flex:0 0 10px;background:none"></span>`; }); h += `</div>`; });
+  $("#headsFig").innerHTML = h;
+})();
+</script>

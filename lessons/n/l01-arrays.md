@@ -35,6 +35,8 @@ Each lesson has a **Run check** button in its Check section. Press it after you 
 
 To try the examples below, open a Python shell (type `python` in a terminal) and run `import numpy as np` first. Every example uses the name `np` for NumPy.
 
+**See it drawn:** the <a href="explainers/matrices-attention.html#grid" target="_blank" rel="noopener">visual companion</a>, sections 1 and 2: a matrix as a grid, and the row-times-column product. Click the cells and tokens; every number is recomputed live.
+
 ### An array is a grid of numbers
 
 `np.array` turns a Python list into an array:

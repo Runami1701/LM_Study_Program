@@ -44,6 +44,8 @@ The reshape reads the last axis of length $3d$ as $3 \times h \times d_h$. The t
 :::
 
 ::: concept
+**See it drawn:** the <a href="explainers/matrices-attention.html#heads" target="_blank" rel="noopener">visual companion</a>, sections 7: one vector cut into heads. Click the cells and tokens; every number is recomputed live.
+
 ### Why several heads
 
 One head computes one set of attention weights per position, so it can look for one kind of thing at a time. Several heads, each with its own projections, can look for different things: one head can follow the previous character, another the start of the current word, a third a matching quote mark. Each head works in a smaller space ($d_h = 32$ instead of 128), so the total cost is about the same as one big head.

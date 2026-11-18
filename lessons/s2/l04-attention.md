@@ -55,6 +55,8 @@ The softmax backward needs `(g * P).sum(axis=-1, keepdims=True)`: one number per
 :::
 
 ::: concept
+**See it drawn:** the <a href="explainers/matrices-attention.html#attention" target="_blank" rel="noopener">visual companion</a>, sections 4 to 6: dot products, attention step by step with the causal mask, and the √dₕ scale. Click the cells and tokens; every number is recomputed live.
+
 ### The idea in one sentence
 
 Each position asks a question (its **query** $q_i$), every position advertises what it holds (its **key** $k_j$), and position $i$ collects the **values** $v_j$ of the positions whose keys match its query best.
