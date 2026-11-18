@@ -266,7 +266,12 @@ def check_boss(lesson: Lesson, impl: str) -> bool:
         for line in str(res["sample"]).splitlines()[:12]:
             print("    " + line)
     if ok and spec.get("ask"):
-        answer = input(f"  {spec['ask']} [y/n] ").strip().lower()
+        try:
+            answer = input(f"  {spec['ask']} [y/n] ").strip().lower()
+        except EOFError:  # started from the website: no keyboard to answer with
+            answer = ""
+            print(f"\n  Last step: {spec['ask']}")
+            print("  Read the sample above, then answer in a terminal:  python -m course check " + lesson.id)
         ok &= answer in ("y", "yes")
     if impl == "workspace":
         data = progress.load()

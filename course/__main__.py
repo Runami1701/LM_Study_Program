@@ -174,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("sync", help="add new lesson stubs to workspace/ after pulling an update").set_defaults(func=cmd_sync)
 
     p = sub.add_parser("data", help="download datasets")
-    p.add_argument("which", nargs="?", default="shakespeare", choices=["shakespeare", "all"])
+    p.add_argument("which", nargs="?", default="shakespeare", choices=["shakespeare", "tinystories", "all"])
     p.set_defaults(func=cmd_data)
 
     args = parser.parse_args(argv)

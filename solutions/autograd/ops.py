@@ -12,7 +12,13 @@ def matmul(a: Tensor, b: Tensor) -> Tensor:
     def _backward():
         g = out.grad
         a.grad += unbroadcast(g @ np.swapaxes(b.data, -1, -2), a.data.shape)   # dA = dOut B^T
-        b.grad += unbroadcast(np.swapaxes(a.data, -1, -2) @ g, b.data.shape)   # dB = A^T dOut
+        if b.data.ndim == 2 and a.data.ndim > 2:
+            # A shared weight: stack all batch rows and do ONE big product, instead of
+            # B small products followed by a sum (same result, much faster).
+            n, p = a.data.shape[-1], g.shape[-1]
+            b.grad += a.data.reshape(-1, n).T @ g.reshape(-1, p)
+        else:
+            b.grad += unbroadcast(np.swapaxes(a.data, -1, -2) @ g, b.data.shape)   # dB = A^T dOut
 
     out._backward = _backward
     return out

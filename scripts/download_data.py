@@ -21,13 +21,21 @@ DATASETS = {
         "n_chars": 1_115_394,
         "vocab_size": 65,
     },
-    # TinyStories is added in Phase 5 (stage 3).
 }
 
+TINYSTORIES = "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/"
+TS_VALID = DATA / "tinystories_valid.txt"
+TS_TRAIN = DATA / "tinystories_train.txt"
+TS_TRAIN_BYTES = 100 * 1024 * 1024     # the first 100 MB of the 2.2 GB file is plenty for stage 3
+SEPARATOR = "<|endoftext|>"
 
-def _download(url: str, dest: Path) -> None:
+
+def _download(url: str, dest: Path, max_bytes: int | None = None) -> None:
     tmp = dest.with_suffix(dest.suffix + ".part")
-    req = urllib.request.Request(url, headers={"User-Agent": "numpy-lm-course"})
+    headers = {"User-Agent": "numpy-lm-course"}
+    if max_bytes:
+        headers["Range"] = f"bytes=0-{max_bytes - 1}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=60) as resp, open(tmp, "wb") as f:
         total = int(resp.headers.get("Content-Length") or 0)
         done = 0
@@ -62,10 +70,28 @@ def fetch_shakespeare(force: bool = False) -> Path:
     return dest
 
 
+def fetch_tinystories(force: bool = False) -> None:
+    DATA.mkdir(exist_ok=True)
+    if not TS_VALID.exists() or force:
+        print("Downloading TinyStories validation text (22 MB) ...")
+        _download(TINYSTORIES + "TinyStoriesV2-GPT4-valid.txt", TS_VALID)
+    if not TS_TRAIN.exists() or force:
+        print("Downloading the first 100 MB of the TinyStories training text ...")
+        _download(TINYSTORIES + "TinyStoriesV2-GPT4-train.txt", TS_TRAIN, max_bytes=TS_TRAIN_BYTES)
+        raw = TS_TRAIN.read_bytes()
+        cut = raw.rfind(SEPARATOR.encode())           # end on a whole story
+        TS_TRAIN.write_bytes(raw[: cut + len(SEPARATOR)] + b"\n")
+    for path in (TS_TRAIN, TS_VALID):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        print(f"  {path.name}: {len(text):,} characters, {text.count(SEPARATOR):,} stories")
+
+
 def main(which: str = "shakespeare") -> int:
     try:
         if which in ("shakespeare", "all"):
             fetch_shakespeare()
+        if which in ("tinystories", "all"):
+            fetch_tinystories()
     except OSError as exc:
         print(f"Download failed: {exc}")
         print("Check your internet connection and try again.")
