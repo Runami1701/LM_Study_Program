@@ -193,6 +193,18 @@
     h += section("notation", "Notation", L.notation);
     h += section("numpy", "Code you need here", L.numpy ? `<div class="numpy-box">${L.numpy}</div>` : "");
     h += section("concept", "Concept", L.concept);
+    if (SERVED) {
+      h += section(
+        "play",
+        "Python playground",
+        `<p class="muted small-note">Run any Python here, on your computer. Code examples have a <b>Try it</b> button that copies them in. Your own functions can be imported, e.g. <code>from workspace.stage1.data import get_batch</code>.</p>
+         <div class="editor play">
+           <textarea id="play-code" class="code play-code" spellcheck="false" autocapitalize="off" wrap="off" aria-label="Python playground">import numpy as np\n\n</textarea>
+           <div class="row editor-bar"><button class="btn primary small" type="button" data-act="play-run">Run</button><span class="save-state">Ctrl+Enter also runs</span><span class="grow"></span><button class="btn small" type="button" data-act="play-clear">Clear</button></div>
+         </div>
+         <pre id="play-out" class="check-output" hidden></pre>`
+      );
+    }
 
     if (L.think.length) {
       h += section(
@@ -324,6 +336,7 @@
 
     renderMath(main);
     highlight(main);
+    if (SERVED) addTryButtons(main);
     refreshStatus();
     bossAnswer = "";
     if (SERVED && L.files.length) { editorDirty = false; editorOpen(L.files[0], true); }
@@ -469,6 +482,16 @@
           btn.textContent = "Run check";
           poll();
         });
+    } else if (act === "try-it") {
+      const code = btn.closest(".tryable").querySelector("code").textContent;
+      $("#play-code").value = "import numpy as np\n\n" + code.replace(/^import numpy as np\n+/, "");
+      $("#sec-play").scrollIntoView({ behavior: "smooth", block: "start" });
+      playRun();
+    } else if (act === "play-run") {
+      playRun();
+    } else if (act === "play-clear") {
+      $("#play-code").value = "import numpy as np\n\n";
+      $("#play-out").hidden = true;
     } else if (act === "ask-answer") {
       bossAnswer = btn.dataset.answer;
       $$('[data-act="ask-answer"]').forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
@@ -622,6 +645,11 @@
   }
 
   $("#main").addEventListener("keydown", (ev) => {
+    if (ev.target.id === "play-code") {
+      if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); playRun(); }
+      else if (ev.key === "Tab" && !ev.shiftKey) { ev.preventDefault(); ev.target.setRangeText("    ", ev.target.selectionStart, ev.target.selectionEnd, "end"); }
+      return;
+    }
     if (ev.target.id !== "code") return;
     if (ev.key === "Tab" && !ev.shiftKey) {
       ev.preventDefault();
@@ -637,6 +665,38 @@
     if (ev.target.id === "code" && !editorDirty) { editorDirty = true; $("#save-state").textContent = "Unsaved changes"; }
   });
   window.addEventListener("beforeunload", (ev) => { if (editorDirty) { ev.preventDefault(); ev.returnValue = ""; } });
+
+  // --------------------------------------------------------------- playground
+  async function playRun() {
+    const out = $("#play-out"), btn = $('[data-act="play-run"]');
+    if (!out) return;
+    out.hidden = false;
+    out.classList.remove("passed");
+    out.textContent = "Running…";
+    btn.disabled = true;
+    try {
+      const r = await fetch("/api/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: $("#play-code").value }) });
+      const d = await r.json();
+      out.textContent = d.output || d.error || "";
+      out.classList.toggle("passed", !!d.ok);
+    } catch (e) {
+      out.textContent = "Could not reach the course server. Is the start window still open?";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function addTryButtons(root) {
+    $$("#sec-numpy pre, #sec-concept pre, #sec-breakit pre", root).forEach((pre) => {
+      const code = pre.querySelector("code.language-python");
+      if (!code || pre.parentElement.classList.contains("tryable")) return;
+      const wrap = document.createElement("div");
+      wrap.className = "tryable";
+      pre.replaceWith(wrap);
+      wrap.appendChild(pre);
+      wrap.insertAdjacentHTML("beforeend", `<button class="btn small try-btn" type="button" data-act="try-it">Try it</button>`);
+    });
+  }
 
   // --------------------------------------------------------------------- jobs
   let jobKind = null, jobTimer = null;

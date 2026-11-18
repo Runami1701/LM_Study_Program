@@ -152,6 +152,37 @@ class CourseHandler(SimpleHTTPRequestHandler):
         except (ValueError, RuntimeError, json.JSONDecodeError) as exc:
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
+    def _from_course_page(self) -> bool:
+        """Accept actions only from the course page itself. Other websites can make a browser
+        send requests to localhost; they fail these checks (wrong Host or Origin, or no JSON)."""
+        host = (self.headers.get("Host") or "").split(":")[0]
+        if host not in ("localhost", "127.0.0.1"):
+            return False
+        origin = self.headers.get("Origin")
+        if origin and origin.split("://", 1)[-1].split(":")[0] not in ("localhost", "127.0.0.1"):
+            return False
+        return (self.headers.get("Content-Type") or "").startswith("application/json")
+
+    def _play(self):
+        """Run a Python snippet from the playground on this computer, with a time limit."""
+        try:
+            code = str(self._body(200_000).get("code", ""))
+        except (ValueError, json.JSONDecodeError) as exc:
+            self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+        play = ROOT / "runs" / "playground.py"
+        play.parent.mkdir(parents=True, exist_ok=True)
+        play.write_text(code, encoding="utf-8")
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONPATH=str(ROOT))
+        try:
+            proc = subprocess.run([sys.executable, str(play)], cwd=ROOT, env=env, capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", timeout=60, stdin=subprocess.DEVNULL)
+            out, ok = (proc.stdout + proc.stderr), proc.returncode == 0
+            out = out.replace(str(play), "playground")
+        except subprocess.TimeoutExpired:
+            out, ok = "Stopped: the code ran longer than 60 seconds.", False
+        self._send_json({"ok": ok, "output": out[-20000:] or "(no output; use print(...) to show values)"})
+
     def _run_check(self):
         """POST /api/check {"lesson": id}: run `python -m course check <id>` and return its output."""
         try:
@@ -210,6 +241,12 @@ class CourseHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.split("?", 1)[0]
+        if not self._from_course_page():
+            self._send_json({"error": "refused: this request did not come from the course page"}, HTTPStatus.FORBIDDEN)
+            return
+        if route == "/api/play":
+            self._play()
+            return
         if route.startswith("/api/tutor/"):
             self._tutor(route.rsplit("/", 1)[1])
             return

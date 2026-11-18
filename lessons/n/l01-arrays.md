@@ -36,8 +36,9 @@ Everything else happens on this website:
 - **Write your code** in the editor in each lesson's *Your attempt* section, and press **Save** (or Ctrl+S).
 - **Check it** with the **Run check** button in the *Check* section. It tests your functions and shows what is right and what is wrong.
 - **Run training** and other long tasks with the buttons in the *Run* section of the lessons that need them.
+- **Try Python** in the *Python playground* below each lesson's explanation. Every code example has a **Try it** button that copies it there and runs it.
 
-To try the examples below, open a Python shell (type `python` in a terminal) and run `import numpy as np` first. Every example uses the name `np` for NumPy.
+Every example uses the name `np` for NumPy; the playground adds `import numpy as np` for you.
 
 **See it drawn:** the <a href="explainers/matrices-attention.html#grid" target="_blank" rel="noopener">visual companion</a>, sections 1 and 2: a matrix as a grid, and the row-times-column product. Click the cells and tokens; every number is recomputed live.
 

@@ -238,6 +238,10 @@ textarea.code:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .save-state { font-size: 13px; color: var(--text-muted); }
 .grow { flex: 1; }
 .jobs { display: grid; gap: 10px; margin-bottom: 10px; }
+textarea.play-code { min-height: 170px; }
+.tryable { position: relative; margin-bottom: 16px; }
+.tryable pre { margin-bottom: 0; padding-right: 86px; }
+.try-btn { position: absolute; top: 8px; right: 8px; }
 .job { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .job-bar { margin: 6px 0; font-family: var(--font-ui); }
 .job-log { max-height: 340px; overflow: auto; }
