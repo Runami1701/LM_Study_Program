@@ -129,6 +129,16 @@ def cmd_reset(args) -> int:
     return 0
 
 
+def cmd_sync(args) -> int:
+    from .reset import sync_workspace
+
+    changes = sync_workspace()
+    for c in changes:
+        print("  " + c)
+    print("Workspace is up to date." if not changes else f"{len(changes)} change(s); your existing code was not touched.")
+    return 0
+
+
 def cmd_data(args) -> int:
     dl = _load_script("download_data")
     return dl.main(args.which)
@@ -160,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("lesson")
     p.add_argument("--yes", "-y", action="store_true", help="skip the confirmation")
     p.set_defaults(func=cmd_reset)
+
+    sub.add_parser("sync", help="add new lesson stubs to workspace/ after pulling an update").set_defaults(func=cmd_sync)
 
     p = sub.add_parser("data", help="download datasets")
     p.add_argument("which", nargs="?", default="shakespeare", choices=["shakespeare", "all"])

@@ -31,3 +31,22 @@ def sample(params: dict, itos: list, stoi: dict, prompt: str, n_chars: int,
         Only the generated characters (length n_chars), not the prompt.
     """
     raise NotImplementedError("sample")
+
+
+def main(temperature: float = 1.0, n_chars: int = 500, seed: int = 0) -> None:
+    """Load runs/s1/params.npz (written by train_mlp) and print a sample."""
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    saved = np.load(root / "runs" / "s1" / "params.npz")
+    params = {name: saved[name] for name in ("C", "W1", "b1", "W2", "b2")}
+    itos = [str(c) for c in saved["itos"]]
+    stoi = {c: i for i, c in enumerate(itos)}
+    if len(sys.argv) > 1:
+        temperature = float(sys.argv[1])
+    print(sample(params, itos, stoi, "\n", n_chars, temperature, np.random.default_rng(seed)))
+
+
+if __name__ == "__main__":
+    main()

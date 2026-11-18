@@ -77,3 +77,35 @@ def apply_reset(lesson: Lesson) -> list[tuple[Path, list[str], list[str]]]:
             lines.extend(_extract(tpl_src, tpl_spans[name]))
         ws.write_text("".join(lines), encoding="utf-8")
     return plans
+
+
+def sync_workspace() -> list[str]:
+    """Add stubs that exist in templates/ but not in workspace/ (new files, and
+    new functions appended to existing files). Never changes existing code."""
+    changes = []
+    tp_root, ws_root = ROOT / "templates", ROOT / "workspace"
+    for tpl in sorted(tp_root.rglob("*.py")):
+        ws = ws_root / tpl.relative_to(tp_root)
+        rel = ws.relative_to(ROOT).as_posix()
+        if not ws.exists():
+            ws.parent.mkdir(parents=True, exist_ok=True)
+            ws.write_text(tpl.read_text(encoding="utf-8"), encoding="utf-8")
+            changes.append(f"created {rel}")
+            continue
+        tpl_src = tpl.read_text(encoding="utf-8")
+        tpl_spans = _def_spans(tpl_src)
+        ws_src = ws.read_text(encoding="utf-8")
+        try:
+            ws_names = set(_def_spans(ws_src))
+        except SyntaxError:
+            changes.append(f"skipped {rel} (it has a syntax error; fix it and run sync again)")
+            continue
+        missing = [n for n in tpl_spans if n not in ws_names]
+        if not missing:
+            continue
+        add = ws_src if ws_src.endswith("\n") else ws_src + "\n"
+        for name in missing:
+            add += "\n\n" + "".join(_extract(tpl_src, tpl_spans[name]))
+        ws.write_text(add, encoding="utf-8")
+        changes.append(f"added {', '.join(missing)} to {rel}")
+    return changes

@@ -165,6 +165,13 @@ def lint_lesson(path: Path, rep: Report, formulas: list[dict]) -> None:
         levels = sorted(b.attrs.get("level", "?") for b in lesson.of("hint"))
         if levels != ["1", "2", "3"]:
             rep.error(rel, f"needs exactly 3 hints with level=1, 2, 3 (found levels {levels})")
+    else:
+        for name in ("goal", "concept", "attempt", "recap"):
+            if counts.get(name, 0) != 1:
+                rep.error(rel, f"boss needs exactly one '::: {name}' section (found {counts.get(name, 0)})")
+        for key in ("results", "metric", "threshold"):
+            if key not in (meta.get("boss") or {}):
+                rep.error(rel, f"boss front matter needs boss.{key}")
 
     for b in lesson.blocks:
         where = f"{rel}:{b.line} ({b.name})"

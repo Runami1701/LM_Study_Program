@@ -223,8 +223,68 @@ def _after_pass_s0_l00(impl: str) -> None:
 AFTER_PASS = {"s0-l00": _after_pass_s0_l00}
 
 
+def check_boss(lesson: Lesson, impl: str) -> bool:
+    """Boss checks read a training run's results.json instead of running tests.
+
+    Front matter:  boss: {results: runs/s1/results.json, metric: val_loss,
+                          threshold: 2.1, must_beat: runs/s0/..., ask: "question?"}
+    """
+    import json
+
+    spec = lesson.boss
+    print(bold(f"{lesson.id} — {lesson.title}"))
+    path = ROOT / spec["results"]
+    if not path.exists():
+        print(red(f"  {BAD} {spec['results']} not found — run the training script first:"))
+        print(f"      {spec.get('run', '')}")
+        return False
+    res = json.loads(path.read_text(encoding="utf-8"))
+    metric = spec.get("metric", "val_loss")
+    value = res.get(metric)
+    if value is None:
+        print(red(f"  {BAD} {spec['results']} has no '{metric}' entry"))
+        return False
+    ok = True
+    threshold = float(spec["threshold"])
+    mark = green(OK) if value <= threshold else red(BAD)
+    ok &= value <= threshold
+    print(f"  {mark} {metric} = {value:.4f}   (target <= {threshold})")
+    if spec.get("must_beat"):
+        other = ROOT / spec["must_beat"]
+        if other.exists():
+            ov = json.loads(other.read_text(encoding="utf-8")).get(spec.get("must_beat_metric", metric))
+            if ov is not None:
+                beat = value < ov
+                ok &= beat
+                print(f"  {green(OK) if beat else red(BAD)} beats {spec['must_beat']} ({ov:.4f})")
+        else:
+            print(dim(f"  ({spec['must_beat']} not found; skipping the comparison)"))
+    if "seconds" in res:
+        print(dim(f"  training time: {res['seconds'] / 60:.1f} min"))
+    if res.get("sample"):
+        print(dim("  sample:"))
+        for line in str(res["sample"]).splitlines()[:12]:
+            print("    " + line)
+    if ok and spec.get("ask"):
+        answer = input(f"  {spec['ask']} [y/n] ").strip().lower()
+        ok &= answer in ("y", "yes")
+    if impl == "workspace":
+        data = progress.load()
+        data["boss"][lesson.id] = {"passed": bool(ok), "value": round(float(value), 4), "at": progress.now_iso()}
+        progress.save(data)
+        progress.record_check(lesson.id, ok)
+    print(green("  Boss defeated!") if ok else dim("  Not yet. Tune the run (see the lesson) and try again."))
+    return ok
+
+
 def check(lesson_id: str, impl: str = "workspace", verbose: bool = False, quiet_next: bool = False) -> bool:
     lesson = get_lesson(lesson_id)
+    if lesson.kind == "boss":
+        ok = check_boss(lesson, impl)
+        nxt = next_lesson(lesson.id)
+        if ok and nxt and not quiet_next:
+            print(f"  Next: {bold(nxt.id)} — {nxt.title}")
+        return ok
     os.environ["COURSE_IMPL"] = impl
     try:
         collector, _code, elapsed, raw = run_lesson_tests(lesson, impl, verbose)
@@ -260,7 +320,7 @@ def check(lesson_id: str, impl: str = "workspace", verbose: bool = False, quiet_
 def check_all(impl: str = "workspace", keep_going: bool = False, verbose: bool = False) -> bool:
     all_ok = True
     for lesson in load_lessons():
-        if not lesson.tests:
+        if not lesson.tests:  # boss checks need a finished training run; run them by name
             continue
         ok = check(lesson.id, impl=impl, verbose=verbose, quiet_next=True)
         print()
