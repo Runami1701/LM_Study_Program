@@ -49,6 +49,27 @@ class CourseHandler(SimpleHTTPRequestHandler):
             self.send_header("Location", SITE_PATH)
             self.end_headers()
             return
+        if path == "/api/tutor/status":
+            from . import tutor
+            self._send_json(tutor.status())
+            return
+        if path == "/api/tutor/history":
+            from urllib.parse import parse_qs, urlparse
+            from . import tutor
+            lesson = (parse_qs(urlparse(self.path).query).get("lesson") or [""])[0]
+            try:
+                c = tutor.load_chat(lesson)
+                self._send_json({"messages": c["messages"], "checks": c["checks"], "has_summary": bool(c["summary"])})
+            except KeyError:
+                self._send_json({"error": "unknown lesson"}, HTTPStatus.BAD_REQUEST)
+            return
+        if path == "/api/tutor/models":
+            from . import tutor
+            try:
+                self._send_json({"models": tutor.free_openrouter_models()})
+            except Exception as exc:  # offline, or the service changed
+                self._send_json({"models": [], "error": str(exc)})
+            return
         if path == "/progress.json":
             with _lock:
                 data = progress.load()
@@ -78,8 +99,43 @@ class CourseHandler(SimpleHTTPRequestHandler):
             output, ok = "The check took longer than 15 minutes and was stopped.", False
         self._send_json({"ok": ok, "output": output})
 
+    def _tutor(self, action: str):
+        from . import tutor
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length > 200_000:
+                raise tutor.TutorError("message too long")
+            body = json.loads(self.rfile.read(length) or b"{}")
+            if action == "config":
+                tutor.save_config(str(body.get("provider", "")), str(body.get("model", "")).strip(),
+                                  str(body.get("api_key", "")).strip(), str(body.get("base_url", "")).strip())
+                self._send_json(tutor.status())
+            elif action == "ask":
+                self._send_json({"text": tutor.ask(str(body.get("lesson", "")), str(body.get("question", "")))})
+            elif action == "clear":
+                tutor.clear_chat(str(body.get("lesson", "")))
+                self._send_json({"ok": True})
+            elif action == "handoff":
+                text, path = tutor.handoff()
+                try:
+                    shown = path.relative_to(ROOT).as_posix()
+                except ValueError:
+                    shown = str(path)
+                self._send_json({"markdown": text, "path": shown})
+            elif action == "check":
+                self._send_json({"text": tutor.check_think(str(body.get("lesson", "")), int(body.get("index", -1)), str(body.get("answer", "")))})
+            else:
+                self.send_error(HTTPStatus.NOT_FOUND)
+        except (tutor.TutorError, KeyError, ValueError, json.JSONDecodeError) as exc:
+            msg = exc.args[0] if exc.args else str(exc)
+            self._send_json({"error": str(msg)}, HTTPStatus.BAD_REQUEST)
+
     def do_POST(self):
-        if self.path.split("?", 1)[0] == "/api/check":
+        route = self.path.split("?", 1)[0]
+        if route.startswith("/api/tutor/"):
+            self._tutor(route.rsplit("/", 1)[1])
+            return
+        if route == "/api/check":
             self._run_check()
             return
         if self.path.split("?", 1)[0] != "/api/event":

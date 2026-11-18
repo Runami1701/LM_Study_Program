@@ -31,6 +31,26 @@ lesson **n-l01**.
 To do the same by hand: `pip install -e .`, then `python -m course data`, then
 `python -m course serve`.
 
+## The AI tutor (optional)
+
+Press the chat button in the top bar to open the tutor column. Ask about the lesson you are
+reading, or press **Check with the tutor** under a think-question to have your answer judged
+(the verdict appears under that question). The tutor sees the lesson but not its solution, and
+gives hints rather than finished code.
+
+Set it up once with the gear button in the tutor column:
+
+- **OpenRouter**: free models in the cloud. Get a free API key at https://openrouter.ai/keys;
+  the form lists the models that are free right now.
+- **Ollama**: a small model on your own computer, no key, works offline. Install it from
+  https://ollama.com, then run `ollama pull qwen2.5:3b`.
+
+Chats are saved in `tutor_memory/` on your computer (not in git). Long chats are folded into
+a running summary the tutor keeps reading. **Summary for another AI** writes
+`tutor_memory/HANDOFF.md`: your progress and, per lesson, what you understood, what confused
+you, which hints you got and what is still open, so another AI or a human tutor can take over.
+The same file: `python -m course tutor --handoff`.
+
 ## How to take a lesson
 
 1. Read the lesson on the site. Answer each think-question in the box before

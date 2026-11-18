@@ -139,6 +139,47 @@ def cmd_sync(args) -> int:
     return 0
 
 
+def cmd_tutor(args) -> int:
+    from getpass import getpass
+
+    from . import tutor
+
+    st = tutor.status()
+    print(f"Tutor now: {st['provider'] or 'not set up'}" + (f", model {st['model']}" if st["provider"] else ""))
+    if args.handoff:
+        text, path = tutor.handoff()
+        print(text)
+        print(f"Written to {path}")
+        return 0
+    if args.test:
+        try:
+            print(tutor.chat([{"role": "user", "content": "In one sentence: what does np.add.at do?"}], max_tokens=80))
+            return 0
+        except tutor.TutorError as exc:
+            print(f"Tutor test failed: {exc}")
+            return 1
+    print("1) OpenRouter: free models in the cloud (needs a free key from https://openrouter.ai/keys)")
+    print("2) Ollama: a small model on this computer (install from https://ollama.com, then: ollama pull qwen2.5:3b)")
+    choice = input("Choose 1 or 2: ").strip()
+    provider = {"1": "openrouter", "2": "ollama"}.get(choice)
+    if not provider:
+        print("Cancelled.")
+        return 1
+    key = ""
+    if provider == "openrouter":
+        key = getpass("OpenRouter API key (hidden; Enter keeps the saved one): ").strip()
+        try:
+            free = tutor.free_openrouter_models()
+            print("Free models right now:", ", ".join(free[:12]) + (" ..." if len(free) > 12 else ""))
+        except Exception:
+            pass
+    default = tutor.PROVIDERS[provider]["default_model"]
+    model = input(f"Model [{default}]: ").strip() or default
+    tutor.save_config(provider, model, key)
+    print(f"Saved to {tutor.CONFIG_PATH.name}. Test it with: python -m course tutor --test")
+    return 0
+
+
 def cmd_data(args) -> int:
     dl = _load_script("download_data")
     return dl.main(args.which)
@@ -170,6 +211,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("lesson")
     p.add_argument("--yes", "-y", action="store_true", help="skip the confirmation")
     p.set_defaults(func=cmd_reset)
+
+    p = sub.add_parser("tutor", help="set up the AI tutor (OpenRouter free models or a local Ollama model)")
+    p.add_argument("--test", action="store_true", help="send one test question")
+    p.add_argument("--handoff", action="store_true", help="write tutor_memory/HANDOFF.md for another tutor or AI")
+    p.set_defaults(func=cmd_tutor)
 
     sub.add_parser("sync", help="add new lesson stubs to workspace/ after pulling an update").set_defaults(func=cmd_sync)
 

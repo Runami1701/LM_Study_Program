@@ -26,12 +26,51 @@
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     <span class="progress-text" id="progress-text"></span>
   </div>
+  <button id="tutor-btn" class="icon-btn tutor-btn" type="button" aria-label="Show the tutor chat" aria-expanded="false" hidden>
+    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 4h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  </button>
   <button id="theme-btn" class="icon-btn" type="button" aria-label="Toggle dark mode"></button>
 </header>
 <div class="layout">
   <nav id="sidebar" class="sidebar" aria-label="Lessons"></nav>
   <div id="scrim" class="scrim" hidden></div>
   <main id="main" class="main" tabindex="-1"></main>
+  <aside id="tutor" class="tutor" aria-label="Tutor chat" hidden>
+    <div class="tutor-head">
+      <div><div class="tutor-title">Tutor</div><div class="tutor-sub" id="tutor-sub"></div></div>
+      <div class="row">
+        <button class="icon-btn" type="button" id="tutor-gear" aria-label="Tutor settings" aria-expanded="false">
+          <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" type="button" id="tutor-close" aria-label="Close the tutor">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <form id="tutor-settings" class="tutor-settings" hidden>
+      <label for="t-provider">Model service</label>
+      <select id="t-provider">
+        <option value="openrouter">OpenRouter (free models, needs a free key)</option>
+        <option value="ollama">Ollama (a small model on this computer)</option>
+      </select>
+      <div id="t-key-row">
+        <label for="t-key">OpenRouter API key</label>
+        <input id="t-key" type="password" autocomplete="off" placeholder="sk-or-...">
+        <div class="tutor-hint">Get a free key at openrouter.ai/keys. It is saved only in <code>tutor.json</code> on this computer.</div>
+      </div>
+      <label for="t-model">Model</label>
+      <input id="t-model" list="t-models" autocomplete="off">
+      <datalist id="t-models"></datalist>
+      <div class="tutor-hint" id="t-model-hint"></div>
+      <div class="row"><button class="btn small primary" type="submit">Save</button><button class="btn small" type="button" id="t-cancel">Cancel</button></div>
+      <div class="tutor-hint" id="t-msg" role="status"></div>
+    </form>
+    <div class="tutor-log" id="tutor-log" aria-live="polite"></div>
+    <form id="tutor-form" class="tutor-form">
+      <textarea id="tutor-input" rows="3" placeholder="Ask about this lesson… (Enter sends, Shift+Enter for a new line)" aria-label="Your question"></textarea>
+      <div class="row"><button class="btn small primary" type="submit" id="tutor-send">Ask</button><button class="btn small" type="button" id="tutor-clear">Clear this chat</button><button class="btn small" type="button" id="tutor-handoff">Summary for another AI</button></div>
+    </form>
+  </aside>
 </div>
 <div id="notice" class="notice" role="status" hidden></div>
 <script type="application/json" id="course-data">/*@DATA@*/</script>

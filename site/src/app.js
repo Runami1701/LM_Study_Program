@@ -203,7 +203,8 @@
               (t, i) => `<div class="think" data-i="${i}">
             <div class="think-q"><span class="qnum">Q${i + 1}</span><div>${t.q}</div></div>
             <textarea class="think-input" data-i="${i}" placeholder="Your answer…" aria-label="Your answer to question ${i + 1}"></textarea>
-            <div class="row"><button class="btn small" type="button" data-act="reveal-think" data-i="${i}">Compare with model answer</button></div>
+            <div class="row"><button class="btn small" type="button" data-act="reveal-think" data-i="${i}">Compare with model answer</button>${SERVED ? `<button class="btn small" type="button" data-act="tutor-check" data-i="${i}">Check with the tutor</button>` : ""}</div>
+            <div class="think-check" data-i="${i}" hidden></div>
             <div class="think-a" data-i="${i}" hidden><div class="label">Model answer</div>${t.a}</div>
           </div>`
             )
@@ -294,6 +295,7 @@
     refreshStatus();
     window.scrollTo(0, 0);
     document.title = `${L.id} · ${L.title} — NumPy LM Course`;
+    tutorShowLesson();
   }
 
   function renderMath(root) {
@@ -425,6 +427,9 @@
           btn.textContent = "Run check";
           poll();
         });
+    } else if (act === "tutor-check") {
+      const ta = $(`.think-input[data-i="${btn.dataset.i}"]`);
+      tutorCheck(Number(btn.dataset.i), ta ? ta.value : "");
     } else if (act === "force-ask") {
       $("#force-confirm").hidden = false;
       btn.hidden = true;
@@ -509,6 +514,242 @@
     store.set("course:last", currentId);
   }
   window.addEventListener("hashchange", route);
+
+  // -------------------------------------------------------------------- tutor
+  // A chat column on the right. One conversation per lesson, kept in this browser.
+  let tutorState = { ready: false, provider: null, model: null, providers: {} };
+
+  function verdictHtml(text) {
+    const m = /^\s*VERDICT:\s*(CORRECT|PARTLY|NOT YET)\s*\n?/i.exec(text);
+    if (!m) return renderRich(text);
+    const v = m[1].toUpperCase();
+    return `<span class="verdict ${v === "CORRECT" ? "correct" : v === "PARTLY" ? "partly" : "notyet"}">${v}</span>` + renderRich(text.slice(m[0].length));
+  }
+
+  function showCheck(i, html, isNote) {
+    const box = $(`.think-check[data-i="${i}"]`);
+    if (!box) return;
+    box.hidden = false;
+    box.innerHTML = `<div class="label">Tutor's check</div>` + (isNote ? `<p class="muted">${html}</p>` : html);
+    renderMath(box);
+  }
+
+  function renderRich(text) {
+    const parts = [];
+    const keep = (html) => { parts.push(html); return `\u0000${parts.length - 1}\u0000`; };
+    let t = String(text);
+    t = t.replace(/```[\w-]*\n?([\s\S]*?)```/g, (_, c) => keep(`<pre><code>${esc(c.replace(/\s+$/, ""))}</code></pre>`));
+    t = t.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => keep(`<div class="math math-display">${esc(m.trim())}</div>`));
+    t = t.replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => keep(`<div class="math math-display">${esc(m.trim())}</div>`));
+    t = t.replace(/\\\((.+?)\\\)/g, (_, m) => keep(`<span class="math math-inline">${esc(m)}</span>`));
+    t = t.replace(/\$([^$\n]+?)\$/g, (_, m) => keep(`<span class="math math-inline">${esc(m)}</span>`));
+    t = t.replace(/`([^`\n]+)`/g, (_, c) => keep(`<code>${esc(c)}</code>`));
+    t = esc(t).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    const html = t.split(/\n{2,}/).map((para) => `<p>${para.replace(/\n/g, "<br>")}</p>`).join("");
+    return html.replace(/\u0000(\d+)\u0000/g, (_, i) => parts[+i]);
+  }
+
+  function tutorMessage(role, text, extra = "") {
+    const div = document.createElement("div");
+    div.className = `msg ${role}`;
+    if (role === "tutor") {
+      div.innerHTML = renderRich(text);
+    } else if (role === "user") {
+      div.innerHTML = extra + renderRich(text);
+    } else {
+      div.textContent = text;
+    }
+    $("#tutor-log").appendChild(div);
+    renderMath(div);
+    $("#tutor-log").scrollTop = $("#tutor-log").scrollHeight;
+    return div;
+  }
+
+  async function tutorShowLesson() {
+    if (!SERVED || !currentId) return;
+    const id = currentId;
+    const L = BY_ID[id];
+    let hist = { messages: [], checks: {}, has_summary: false };
+    try { hist = await (await fetch(`/api/tutor/history?lesson=${encodeURIComponent(id)}`, { cache: "no-store" })).json(); } catch (e) { /* offline */ }
+    if (id !== currentId) return;
+    const log = $("#tutor-log");
+    log.innerHTML = "";
+    tutorMessage("note", `Lesson ${L.id} · ${L.title}. The tutor sees this lesson (not its solution) and gives hints rather than finished code. Chats are saved on this computer.`);
+    if (hist.has_summary) tutorMessage("note", "Earlier messages of this chat were folded into a summary; the tutor still remembers them.");
+    if (!tutorState.ready) tutorMessage("note", "The tutor is not set up yet: press the gear above and choose a model service.");
+    for (const turn of hist.messages || []) tutorMessage(turn.role === "assistant" ? "tutor" : "user", turn.content);
+    Object.entries(hist.checks || {}).forEach(([i, c]) => {
+      const ta = $(`.think-input[data-i="${i}"]`);
+      if (ta && !ta.value) ta.value = c.answer;
+      showCheck(i, verdictHtml(c.result));
+    });
+    $("#tutor-sub").textContent = tutorState.ready ? `${tutorState.provider} · ${tutorState.model}` : "not set up";
+  }
+
+  function tutorOpen(open) {
+    $("#tutor").hidden = !open;
+    $("#tutor-btn").setAttribute("aria-expanded", String(open));
+    $("#tutor-btn").setAttribute("aria-label", open ? "Hide the tutor chat" : "Show the tutor chat");
+    store.set("course:tutor-open", open);
+    if (open) setTimeout(() => $("#tutor-input").focus(), 0);
+  }
+
+  async function tutorPost(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({ error: "The course server sent an unreadable answer." }));
+    if (!r.ok || d.error) throw new Error(d.error || `error ${r.status}`);
+    return d;
+  }
+
+  let tutorBusy = false;
+  async function tutorRun(userText, request, shown) {
+    if (tutorBusy) return;
+    if (!tutorState.ready) { tutorOpen(true); tutorSettings(true); tutorMessage("note", "Set up the tutor first (the form above)."); return; }
+    tutorBusy = true;
+    $("#tutor-send").disabled = true;
+    const id = currentId;
+    tutorMessage("user", shown || userText);
+    const waiting = tutorMessage("note", "The tutor is thinking…");
+    waiting.classList.add("typing");
+    try {
+      const d = await request();
+      waiting.remove();
+      if (id === currentId) tutorMessage("tutor", d.text);
+    } catch (e) {
+      waiting.remove();
+      tutorMessage("error", String(e.message || e));
+    } finally {
+      tutorBusy = false;
+      $("#tutor-send").disabled = false;
+    }
+  }
+
+  function tutorAsk(question) {
+    question = question.trim();
+    if (!question) return;
+    tutorRun(question, () => tutorPost("/api/tutor/ask", { lesson: currentId, question }));
+  }
+
+  async function tutorCheck(i, answer) {
+    if (!tutorState.ready) { tutorOpen(true); tutorSettings(true); showCheck(i, "Set up the tutor first (the form in the tutor column).", true); return; }
+    if (!answer.trim()) { showCheck(i, "Write your answer in the box first, then press “Check with the tutor”.", true); return; }
+    const btn = $(`[data-act="tutor-check"][data-i="${i}"]`);
+    btn.disabled = true;
+    showCheck(i, "The tutor is reading your answer…", true);
+    try {
+      const d = await tutorPost("/api/tutor/check", { lesson: currentId, index: i, answer });
+      showCheck(i, verdictHtml(d.text));
+    } catch (e) {
+      showCheck(i, esc(String(e.message || e)), true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function tutorSettings(open) {
+    const form = $("#tutor-settings");
+    form.hidden = !open;
+    $("#tutor-gear").setAttribute("aria-expanded", String(open));
+    if (!open) return;
+    $("#t-provider").value = tutorState.provider || "openrouter";
+    $("#t-model").value = tutorState.model || tutorState.providers[$("#t-provider").value] || "";
+    $("#t-key").value = "";
+    $("#t-key").placeholder = tutorState.has_key ? "saved (leave empty to keep it)" : "sk-or-...";
+    $("#t-msg").textContent = "";
+    tutorProviderChanged(false);
+  }
+
+  async function tutorProviderChanged(resetModel = true) {
+    const prov = $("#t-provider").value;
+    $("#t-key-row").hidden = prov !== "openrouter";
+    if (resetModel) $("#t-model").value = tutorState.providers[prov] || "";
+    const list = $("#t-models");
+    list.innerHTML = "";
+    if (prov === "ollama") {
+      $("#t-model-hint").textContent = "Install Ollama (ollama.com), then run: ollama pull qwen2.5:3b. Any model you have pulled works, e.g. llama3.2:3b.";
+      ["qwen2.5:3b", "llama3.2:3b", "qwen2.5:7b", "gemma2:2b"].forEach((m) => list.insertAdjacentHTML("beforeend", `<option value="${m}">`));
+      return;
+    }
+    $("#t-model-hint").textContent = "Loading the list of free models…";
+    try {
+      const d = await (await fetch("/api/tutor/models")).json();
+      (d.models || []).forEach((m) => list.insertAdjacentHTML("beforeend", `<option value="${esc(m)}">`));
+      $("#t-model-hint").textContent = d.models && d.models.length
+        ? `${d.models.length} free models available right now; click the box to pick one. Free models change often: if one stops working, pick another.`
+        : "Could not load the list (offline?). Type a model id ending in :free.";
+    } catch (e) {
+      $("#t-model-hint").textContent = "Could not load the list. Type a model id ending in :free.";
+    }
+  }
+
+  async function tutorRefresh() {
+    try {
+      tutorState = await (await fetch("/api/tutor/status", { cache: "no-store" })).json();
+    } catch (e) { /* not served */ }
+    tutorShowLesson();
+  }
+
+  if (SERVED) {
+    $("#tutor-btn").hidden = false;
+    $("#tutor-btn").addEventListener("click", () => tutorOpen($("#tutor").hidden));
+    $("#tutor-close").addEventListener("click", () => tutorOpen(false));
+    $("#tutor-gear").addEventListener("click", () => tutorSettings($("#tutor-settings").hidden));
+    $("#t-cancel").addEventListener("click", () => tutorSettings(false));
+    $("#t-provider").addEventListener("change", () => tutorProviderChanged(true));
+    $("#tutor-settings").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      $("#t-msg").textContent = "Saving…";
+      try {
+        tutorState = await tutorPost("/api/tutor/config", { provider: $("#t-provider").value, model: $("#t-model").value, api_key: $("#t-key").value });
+        $("#t-msg").textContent = tutorState.ready ? "Saved. Ask a question below to try it." : "Saved, but an OpenRouter key is still missing.";
+        if (tutorState.ready) setTimeout(() => tutorSettings(false), 900);
+        tutorShowLesson();
+      } catch (e) {
+        $("#t-msg").textContent = String(e.message || e);
+      }
+    });
+    $("#tutor-form").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const q = $("#tutor-input").value;
+      $("#tutor-input").value = "";
+      tutorAsk(q);
+    });
+    $("#tutor-input").addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); $("#tutor-form").requestSubmit(); }
+    });
+    $("#tutor-clear").addEventListener("click", async () => {
+      try { await tutorPost("/api/tutor/clear", { lesson: currentId }); } catch (e) { /* ignore */ }
+      $$(".think-check").forEach((b) => (b.hidden = true));
+      tutorShowLesson();
+    });
+    $("#tutor-handoff").addEventListener("click", async (ev) => {
+      const btn = ev.currentTarget;
+      if (!tutorState.ready) { tutorSettings(true); return; }
+      btn.disabled = true;
+      const waiting = tutorMessage("note", "Writing a summary of all your tutor chats for another AI…");
+      try {
+        const d = await tutorPost("/api/tutor/handoff", {});
+        waiting.remove();
+        const div = tutorMessage("note", "");
+        div.className = "msg tutor handoff";
+        div.innerHTML = `<p><strong>Saved to <code>${esc(d.path)}</code>.</strong> Give that file to another AI (or paste it) and it can take over.</p>
+          <div class="row"><button class="btn small" type="button">Copy the summary</button></div><pre>${esc(d.markdown)}</pre>`;
+        $("button", div).addEventListener("click", (e) => {
+          const b = e.currentTarget;
+          const done = () => { b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy the summary"), 1400); };
+          if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(d.markdown).then(done, () => fallbackCopy(d.markdown, done));
+          else fallbackCopy(d.markdown, done);
+        });
+      } catch (e) {
+        waiting.remove();
+        tutorMessage("error", String(e.message || e));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    tutorRefresh();
+    if (store.get("course:tutor-open", window.innerWidth > 1250)) tutorOpen(true);
+  }
 
   // -------------------------------------------------------------------- start
   function showNotice(html) {

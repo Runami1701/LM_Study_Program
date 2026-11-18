@@ -1,5 +1,7 @@
 # learner state
 progress.json
+tutor.json
+tutor_memory/
 progress.json.tmp
 
 # downloaded data and training outputs
