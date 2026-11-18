@@ -3,7 +3,7 @@ id: s2-l01
 title: Token + positional embeddings; targets at every position
 stage: s2
 order: 1
-prereqs: [a-l04]
+prereqs: [a-l05]
 files: [workspace/stage2/layers.py]
 functions: [get_batch_seq, Linear, Embeddings]
 tests: tests/s2/test_l01_embeddings.py

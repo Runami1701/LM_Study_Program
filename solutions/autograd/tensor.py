@@ -24,7 +24,7 @@ class Tensor:
         if arr.dtype not in (np.float32, np.float64):
             arr = arr.astype(np.float32)          # ints, Python floats -> float32
         self.data = arr
-        self.grad = np.zeros(arr.shape, dtype=arr.dtype)   # np.zeros is lazily zeroed by the OS: cheaper than zeros_like
+        self.grad = np.zeros(arr.shape, dtype=arr.dtype)   # np.zeros, not zeros_like: see a-l05
         self._prev = tuple(_prev)                 # the Tensors this one was computed from
         self._backward = lambda: None             # pushes self.grad into the parents' grads
         self._op = _op
