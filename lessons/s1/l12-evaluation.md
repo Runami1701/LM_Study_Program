@@ -11,94 +11,116 @@ est_minutes: 60
 ---
 
 ::: goal
-Measure the model honestly: average the loss over many validation batches, read the train/validation gap, choose a learning rate with a range test, decay it over the run, and produce `runs/s1/results.json` for the boss check.
+You will measure the model honestly. You average the loss over many validation batches, read the gap between training and validation loss, pick a learning rate with a range test, and lower the learning rate during the run. The final run writes `runs/s1/results.json` for the boss check.
 :::
 
 ::: notation
 | Symbol | Meaning |
 | --- | --- |
-| $L_i$ | the loss of the $i$-th sampled batch |
+| $L_i$ | the loss of the $i$-th batch drawn |
 | $n$ | number of batches averaged (`n_batches`) |
 | $\hat L$ | the estimate $\frac{1}{n}\sum_i L_i$ |
-| $\sigma$ | standard deviation of a single batch's loss |
+| $\sigma$ | standard deviation of one batch's loss |
 | $\mathrm{Var}$ | variance |
 | $\eta_0, \eta_1$ | learning rate at the first and at the last step (`lr`, `lr_final`) |
 | $\eta_t$ | learning rate at step $t$ |
-| $t$ | step index, $0 \dots S-1$ |
+| $t$ | step number, $0 \dots S-1$ |
 | $S$ | total number of steps (`steps`) |
+:::
+
+::: numpy
+### Mean of a Python list
+
+```python
+losses = [1.5, 2.0, 2.5]
+print(np.mean(losses))            # 2.0
+print(type(float(np.mean(losses))))   # <class 'float'>   a plain Python number
+```
+
+### Powers with a fractional exponent
+
+`a ** 0.5` is the square root of `a`. The decay formula below raises a ratio to the power `step / (steps - 1)`:
+
+```python
+print(1e-2 * (1e-4 / 1e-2) ** 0.5)    # 0.001   halfway between 1e-2 and 1e-4, on a log scale
+```
+
+### A missing value
+
+`config["lr_final"]` may be `None`, Python's "no value". Test for it with `if config["lr_final"] is None:` (or `if not ...:`).
 :::
 
 ::: concept
 ### One batch is not a measurement
 
-The loss on a single batch of 128 examples is noisy. For the trained reference model, 500 validation batches gave losses from 1.21 to 2.12, with standard deviation $\sigma \approx 0.15$. Averaging $n$ independent batches divides the variance by $n$:
+The loss of one batch of 128 examples is noisy. For the trained reference model, 500 validation batches gave losses from 1.21 to 2.12, with standard deviation $\sigma \approx 0.15$. Averaging $n$ independent batches divides the variance by $n$:
 
 $$
 \mathrm{Var}(\hat L) = \mathrm{Var}\left(\frac{1}{n} \sum_{i=1}^{n} L_i\right) = \frac{1}{n^2} \cdot n\,\sigma^2 = \frac{\sigma^2}{n}
 $$
 
-so the standard deviation of the estimate is $\frac{\sigma}{\sqrt{n}}$. With $n = 50$: $\frac{0.15}{\sqrt{50}} \approx 0.021$ (measured: 0.023). That is precise enough to compare runs differing by 0.05; one batch is not. `estimate_loss` draws $n$ batches with `get_batch` and returns their mean. The final number in `results.json` uses 200 batches of 512 examples.
+So the estimate's standard deviation is $\frac{\sigma}{\sqrt{n}}$. With $n = 50$: $\frac{0.15}{\sqrt{50}} \approx 0.021$ (measured: 0.023). That is precise enough to compare two runs that differ by 0.05; one batch is not. `estimate_loss` draws $n$ batches with `get_batch` and returns the mean of their losses. The final number in `results.json` uses 200 batches of 512 examples.
 
-### The train/validation gap
+### The gap between training and validation loss
 
-Training loss measures what the model has memorized; validation loss measures what it generalizes. The reference run ends with **train 1.37, validation 1.68**. A gap that keeps widening while validation stalls or rises is **overfitting**: 134K parameters can memorize parts of a 1M-character text. Remedies: stop earlier, use a smaller model, or get more data (stage 3). A model that underfits shows train ≈ validation, both still falling: train longer or make it bigger.
+Training loss measures what the model has memorized; validation loss measures how well it handles new text. The reference run ends with **training 1.37 and validation 1.68**. When this gap keeps growing while the validation loss stops falling or rises, the model is **overfitting**: its 134K parameters memorize parts of a 1M-character text. The remedies: stop earlier, use a smaller model, or use more data (Stage 3). The opposite case, training and validation loss equal and both still falling, is underfitting: train longer or use a bigger model.
 
 ### Choosing a learning rate: the range test
 
-Run short trainings (1,500 Adam steps here) at log-spaced learning rates and compare the final losses. The reference results, mean training loss over the last 100 steps:
+Run short trainings (1,500 Adam steps here) with learning rates spaced evenly on a log scale, and compare the final losses. The reference results, as the mean training loss over the last 100 steps:
 
 | learning rate | $10^{-4}$ | $3 \cdot 10^{-4}$ | $10^{-3}$ | $3 \cdot 10^{-3}$ | $10^{-2}$ | $3 \cdot 10^{-2}$ | $10^{-1}$ |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | loss | 2.50 | 2.24 | 2.00 | **1.98** | 2.44 | 4.61 | 15.4 |
 
-Too small crawls; too large becomes unstable and then diverges. The best short-run value ($3 \cdot 10^{-3}$) is a good **starting** rate. Log spacing matters: learning rates act multiplicatively, so $10^{-3}$ vs $3 \cdot 10^{-3}$ is as big a step as $10^{-2}$ vs $3 \cdot 10^{-2}$.
+Too small crawls. Too large becomes unstable and then blows up. The best short-run value ($3 \cdot 10^{-3}$) is a good **starting** rate. The spacing is on a log scale because learning rates act by multiplication: going from $10^{-3}$ to $3 \cdot 10^{-3}$ is as big a change as going from $10^{-2}$ to $3 \cdot 10^{-2}$.
 
-### Decay: big steps early, small steps late
+### Large steps early, small steps late
 
-Early on, large steps cover ground fast. Late in training, the noise of minibatch gradients keeps a large-step model bouncing around a minimum instead of settling into it. So we shrink the rate over the run, exponentially from $\eta_0$ to $\eta_1$:
+Early in training, large steps cover ground fast. Late in training, the noise of batch gradients keeps a model with large steps bouncing around a minimum instead of settling into it. So we lower the rate during the run, by the same factor at every step, from $\eta_0$ down to $\eta_1$:
 
 $$
 \eta_t = \eta_0 \left(\frac{\eta_1}{\eta_0}\right)^{t/(S-1)}
 $$
 
-Check the endpoints: $t = 0$ gives exponent 0 and $\eta_0$; $t = S-1$ gives exponent 1 and $\eta_0 \cdot \frac{\eta_1}{\eta_0} = \eta_1$. Halfway, the exponent is $\frac{1}{2}$:
+Check the ends: at $t = 0$ the exponent is 0, which gives $\eta_0$. At $t = S-1$ the exponent is 1, which gives $\eta_0 \cdot \frac{\eta_1}{\eta_0} = \eta_1$. Halfway, the exponent is $\frac{1}{2}$:
 
 $$
 \eta_{\text{mid}} = \eta_0 \left(\frac{\eta_1}{\eta_0}\right)^{1/2} = \sqrt{\eta_0\, \eta_1}
 $$
 
-the geometric mean: $10^{-2}$ and $10^{-4}$ meet at $10^{-3}$. Each step multiplies the rate by the same factor, which suits a quantity that acts multiplicatively.
+This is the geometric mean: $10^{-2}$ and $10^{-4}$ meet at $10^{-3}$.
 
-How much it matters here: the default run (Adam, $3 \cdot 10^{-3}$ decaying to $3 \cdot 10^{-4}$) ends at validation **1.68**; the same run at a constant $3 \cdot 10^{-3}$ ends at **1.90**.
+How much this matters: the default run (Adam, $3 \cdot 10^{-3}$ falling to $3 \cdot 10^{-4}$) ends at validation **1.68**. The same run at a constant $3 \cdot 10^{-3}$ ends at **1.90**.
 
 ### results.json
 
-`main()` in `train_mlp.py` (given) trains with `CONFIG`, then writes `runs/s1/results.json`: final validation and training loss (200 batches of 512), wall time, step count, parameter count, the config and a sample. It also saves the parameters and vocabulary to `runs/s1/params.npz`. Logging every run's config next to its result is how you keep track of what you tried.
+`main()` in `train_mlp.py` is given. It trains with `CONFIG`, then writes `runs/s1/results.json`: the final validation and training loss (200 batches of 512 examples), the time, the number of steps and parameters, the config and a text sample. It also saves the parameters and the vocabulary to `runs/s1/params.npz`. Keeping each run's config next to its result is how you keep track of what you tried.
 
-The reference: validation **1.682** in **1.4 minutes** on a 4-core cloud CPU. The boss target is 1.75.
+The reference run reached validation **1.682** in **1.4 minutes** on a 4-core cloud CPU. The boss target is 1.75.
 :::
 
 ::: think
-Q: Your evaluation uses 5 batches and reports 1.70 for run A and 1.74 for run B. Is A better?
-A: Not established. With $\sigma \approx 0.15$, five batches give a standard error of $\frac{0.15}{\sqrt 5} \approx 0.07$, larger than the difference. Re-evaluate with 50+ batches (error ~0.02) before concluding anything.
+Q: Your evaluation uses 5 batches. It reports 1.70 for run A and 1.74 for run B. Is A better?
+A: You can't tell yet. With $\sigma \approx 0.15$, five batches give an error of about $\frac{0.15}{\sqrt 5} \approx 0.07$, which is larger than the difference. Evaluate again with 50 or more batches (error about 0.02) before you decide.
 :::
 
 ::: think
-Q: Validation loss goes 2.03, 1.89, 1.80, 1.72, 1.70, 1.71, 1.70 while training loss keeps falling to 1.37. What is happening, and what would you change first?
-A: Overfitting: the model keeps improving on the text it has seen but no longer on new text. Training longer won't help. Options: fewer steps (stop around the minimum), a smaller hidden layer, or more data. For the boss target, the current curve is already fine.
+Q: The validation loss goes 2.03, 1.89, 1.80, 1.72, 1.70, 1.71, 1.70, while the training loss keeps falling to 1.37. What is happening, and what would you change first?
+A: Overfitting: the model keeps improving on the text it has seen, but no longer on new text. Training longer won't help. You could stop earlier (around the minimum), use a smaller hidden layer, or use more data. For the boss target, this curve is already good enough.
 :::
 
 ::: think
-Q: In the range test, why judge by the loss after a fixed number of steps rather than after "convergence"?
-A: Convergence takes the full run for every candidate, which is expensive. The early-run comparison captures what the learning rate mostly controls: whether training is stable and how fast it makes progress. The decay schedule then handles the late phase.
+Q: In the range test, why compare losses after a fixed number of steps instead of training each candidate to the end?
+A: Training to the end costs a full run per candidate. The short run already shows what the learning rate mostly controls: whether training is stable and how fast it improves. The decay schedule then takes care of the late phase.
 :::
 
 ::: hint level=1
-`estimate_loss` is a short loop: draw a batch, compute its loss, collect, average. `lr_at` is one formula with an exponent that goes from 0 to 1 over the run.
+`estimate_loss` is a short loop: draw a batch, compute its loss, collect it, and return the average. `lr_at` is one formula whose exponent goes from 0 to 1 over the run.
 :::
 
 ::: hint level=2
-Call `get_batch(data, B, k, rng)` exactly `n_batches` times, `forward(params, x, y)[0]` for each loss, and return `float(np.mean(...))`. For `lr_at`, the fraction is `step / (config["steps"] - 1)`; return `config["lr"]` unchanged when `lr_final` is `None`.
+Call `get_batch(data, B, k, rng)` exactly `n_batches` times, take `forward(params, x, y)[0]` as each loss, and return `float(np.mean(...))`. In `lr_at`, the fraction is `step / (config["steps"] - 1)`; return `config["lr"]` unchanged when `lr_final` is `None`.
 :::
 
 ::: hint level=3
@@ -106,7 +128,7 @@ Call `get_batch(data, B, k, rng)` exactly `n_batches` times, `forward(params, x,
 estimate_loss(params, data, B, k, n_batches, rng):
     losses ← []
     repeat n_batches times:
-        x, y ← get_batch(data, B, k, rng);  append forward(params, x, y) loss
+        x, y ← get_batch(data, B, k, rng);  append the loss from forward(params, x, y)
     return mean(losses) as a Python float
 
 lr_at(step, config):
@@ -117,33 +139,33 @@ lr_at(step, config):
 :::
 
 ::: attempt
-File: `workspace/stage1/train_mlp.py` — implement `estimate_loss` and `lr_at`.
+File: `workspace/stage1/train_mlp.py` — fill in `estimate_loss` and `lr_at`.
 Check: `python -m course check s1-l12`
-Then run the full training (about 1.5 minutes on the reference CPU): `python -m workspace.stage1.train_mlp`, and take on the boss: `python -m course check s1-boss`.
+Then run the full training (about 1.5 minutes on the reference CPU) with `python -m workspace.stage1.train_mlp`, and take on the boss with `python -m course check s1-boss`.
 :::
 
 ::: solution
 @include solutions/stage1/train_mlp.py#estimate_loss
 
-- Drawing through `get_batch` with the caller's `rng` makes the estimate reproducible for a fixed seed.
-- Returning `float(np.mean(...))` gives a plain number for logs and JSON.
+- Drawing through `get_batch` with the caller's `rng` makes the estimate repeatable for a fixed seed.
+- `float(np.mean(...))` returns a plain number for logs and for the JSON file.
 
 @include solutions/stage1/train_mlp.py#lr_at
 
-- `max(1, steps - 1)` avoids dividing by zero for a one-step run; `not lr1` treats `None` (and 0) as "no decay".
+- `max(1, steps - 1)` avoids a division by zero in a one-step run. `not lr1` treats `None` (and 0) as "no decay".
 :::
 
 ::: breakit
-Evaluate the same trained model with `n_batches = 1` ten times (different seeds) and with `n_batches = 50` ten times. Expect the single-batch values to spread over roughly ±0.3 (e.g. 1.45 to 1.95) and the 50-batch values to agree within about ±0.05.
+Evaluate the same trained model with `n_batches = 1` ten times (with different seeds), and with `n_batches = 50` ten times. The single-batch values spread over about ±0.3 (for example 1.45 to 1.95); the 50-batch values agree within about ±0.05.
 :::
 
 ::: breakit
-Go back to the break-it of s1-l01: build the split by shuffling the windows (so val windows overlap training ones), train, and compare. Expect the "validation" loss to come out clearly below the honest 1.68 and close to the training loss: the leak makes the model look like it generalizes better than it does.
+Go back to the break-it of s1-l01: split the data after shuffling the windows (so validation windows overlap training ones), train, and compare. The "validation" loss comes out clearly below the honest 1.68, close to the training loss. The leak makes the model look better at new text than it is.
 :::
 
 ::: recap
-- Average many batches: the estimate's noise falls like $\sigma / \sqrt{n}$.
-- The train/validation gap diagnoses overfitting vs underfitting.
-- A log-spaced range test picks the starting learning rate; exponential decay to `lr_final` gains 0.2 nats here.
-- `results.json` records every run's numbers and config.
+- Average many batches: the noise of the estimate falls like $\sigma / \sqrt{n}$.
+- The gap between training and validation loss tells overfitting from underfitting.
+- A range test with log-spaced learning rates picks the starting rate; lowering it to `lr_final` gains 0.2 here.
+- `results.json` records each run's numbers and config.
 :::
