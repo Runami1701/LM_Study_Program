@@ -24,7 +24,7 @@ class Tensor:
         if arr.dtype not in (np.float32, np.float64):
             arr = arr.astype(np.float32)          # ints, Python floats -> float32
         self.data = arr
-        self.grad = np.zeros_like(arr)
+        self.grad = np.zeros(arr.shape, dtype=arr.dtype)   # np.zeros is lazily zeroed by the OS: cheaper than zeros_like
         self._prev = tuple(_prev)                 # the Tensors this one was computed from
         self._backward = lambda: None             # pushes self.grad into the parents' grads
         self._op = _op
@@ -116,7 +116,7 @@ def backward(root: Tensor) -> None:
                 stack.append((parent, False))
     for node in topo:
         if node._prev:                            # intermediate: start from zero every time
-            node.grad = np.zeros_like(node.data)
+            node.grad = np.zeros(node.data.shape, dtype=node.data.dtype)
     root.grad = np.ones_like(root.data)           # dL/dL = 1
     for node in reversed(topo):                   # each node runs after every node that uses it
         node._backward()
