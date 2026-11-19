@@ -76,7 +76,7 @@ def cmd_serve(args) -> int:
     if build.is_stale():
         out = build.build()
         print(f"Built {out.relative_to(ROOT).as_posix()}")
-    serve(port=args.port, open_browser=not args.no_browser)
+    serve(port=args.port, open_browser=not args.no_browser, host=args.host)
     return 0
 
 
@@ -197,6 +197,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("serve", help="build (if needed) and open the web course")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--host", default="127.0.0.1",
+                   help="0.0.0.0 lets other devices on your home network open the course (asks for a passcode)")
     p.add_argument("--no-browser", action="store_true")
     p.set_defaults(func=cmd_serve)
 

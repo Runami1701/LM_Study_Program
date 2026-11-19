@@ -31,6 +31,31 @@ lesson **n-l01**.
 To do the same by hand: `pip install -e .`, then `python -m course data`, then
 `python -m course serve`.
 
+## Run it on a Raspberry Pi (open it from any device at home)
+
+On a Raspberry Pi 4 or 5 with 64-bit Raspberry Pi OS, run as your normal user:
+
+```bash
+git clone https://github.com/Runami1701/LM_Study_Program.git && cd LM_Study_Program
+./scripts/pi_setup.sh
+```
+
+The script installs the course in `.venv`, downloads the training text, and adds a service
+(`lm-course`) that starts the course on every boot. At the end it prints the address, such as
+`http://raspberrypi.local:8000/`, and a passcode. Open that address on your laptop or phone
+and type the passcode once; the browser remembers it.
+
+The passcode exists because the course runs Python on the Pi: without it, anyone on your
+Wi-Fi could. It is saved in `access.txt`; delete that file and restart the service
+(`sudo systemctl restart lm-course`) to get a new one. After a `git pull`, run
+`./scripts/pi_setup.sh` again.
+
+On a Pi, Stage 1 still takes minutes, but Stage 2 and 3 training take several times longer
+than on a laptop (use the Continue buttons after a stop). For the tutor, use OpenRouter:
+Ollama models run very slowly on a Pi 4.
+
+To do the same on any computer by hand: `python -m course serve --host 0.0.0.0`.
+
 ## The AI tutor (optional)
 
 Press the chat button in the top bar to open the tutor column. Ask about the lesson you are

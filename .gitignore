@@ -3,6 +3,7 @@ progress.json
 tutor.json
 tutor_memory/
 progress.json.tmp
+access.txt
 
 # downloaded data and training outputs
 data/

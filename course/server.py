@@ -5,34 +5,137 @@ GET  /progress.json    -> the learner's progress (served fresh, never cached)
 POST /api/event        -> record a site event (hint revealed, solution forced,
                           mark as read) into progress.json
 Everything else is served as static files from the repository root.
+
+By default the server listens on this computer only (127.0.0.1). With
+``--host 0.0.0.0`` other devices on the home network can open it too; then
+every request needs the passcode saved in access.txt (see ``access_code``),
+because the site can run Python on this machine.
 """
 
 from __future__ import annotations
 
+import hmac
 import json
 import os
+import secrets
+import socket
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from functools import partial
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs
 
 from . import progress
 from .registry import ROOT, load_lessons
 
 SITE_PATH = "/site/build/index.html"
+ACCESS_FILE = ROOT / "access.txt"
+COOKIE = "course_access"
+# Never served as files: the tutor's API key and the network passcode.
+PRIVATE_FILES = {(ROOT / "tutor.json").resolve(), ACCESS_FILE.resolve()}
+LOCAL_NAMES = ("localhost", "127.0.0.1")
 _lock = threading.Lock()
+
+LOGIN_PAGE = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Course passcode</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:22rem;margin:4rem auto;padding:0 1rem}}
+input,button{{font-size:1.1rem;padding:.5rem;width:100%;box-sizing:border-box;margin-top:.5rem}}
+.err{{color:#b00020}}</style></head><body>
+<h1>Course passcode</h1>
+<p>Type the passcode shown on the computer running the course (also in its <code>access.txt</code>).</p>
+{error}<form method="post" action="/login">
+<input name="code" autocomplete="current-password" autofocus required>
+<button type="submit">Open the course</button></form></body></html>"""
+
+
+def access_code() -> str:
+    """The network passcode: made once, then read from access.txt."""
+    if ACCESS_FILE.exists():
+        code = ACCESS_FILE.read_text(encoding="utf-8").strip()
+        if code:
+            return code
+    alphabet = "abcdefghjkmnpqrstuvwxyz23456789"          # no 0/o, 1/l/i look-alikes
+    code = "-".join("".join(secrets.choice(alphabet) for _ in range(4)) for _ in range(3))
+    ACCESS_FILE.write_text(code + "\n", encoding="utf-8")
+    try:
+        os.chmod(ACCESS_FILE, 0o600)
+    except OSError:
+        pass
+    return code
+
+
+def _lan_addresses() -> list[str]:
+    names = [f"{socket.gethostname()}.local"]
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 9))          # no packet is sent; this picks the LAN interface
+            names.append(s.getsockname()[0])
+    except OSError:
+        pass
+    return names
 
 
 class CourseHandler(SimpleHTTPRequestHandler):
+    access: str | None = None    # set when serving on the network; None = this computer only
+
     def log_message(self, format, *args):  # keep the terminal quiet
         pass
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    # --- network passcode -------------------------------------------------------------
+    def _signed_in(self) -> bool:
+        if self.access is None:
+            return True
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            name, _, value = part.strip().partition("=")
+            if name == COOKIE and hmac.compare_digest(value.encode(), self.access.encode()):
+                return True
+        return False
+
+    def _send_login(self, error: str = "", status=HTTPStatus.OK):
+        body = LOGIN_PAGE.format(error=f'<p class="err">{error}</p>' if error else "").encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _login(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        if length > 1000:
+            self._send_login("Request too large.", HTTPStatus.BAD_REQUEST)
+            return
+        form = parse_qs(self.rfile.read(length).decode("utf-8", "replace"))
+        code = (form.get("code") or [""])[0].strip().lower()
+        if not hmac.compare_digest(code.encode(), (self.access or "").encode()):
+            time.sleep(1)                         # slow down guessing
+            self._send_login("That passcode is wrong. Try again.", HTTPStatus.FORBIDDEN)
+            return
+        self.send_response(HTTPStatus.SEE_OTHER)
+        self.send_header("Set-Cookie", f"{COOKIE}={self.access}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict")
+        self.send_header("Location", SITE_PATH)
+        self.end_headers()
+
+    def _refuse_signed_out(self, path: str) -> bool:
+        """When serving on the network: send signed-out visitors to the passcode page."""
+        if self._signed_in():
+            return False
+        if path.startswith("/api/") or path == "/progress.json":
+            self._send_json({"error": "Sign in first: reload the page and type the passcode."}, HTTPStatus.UNAUTHORIZED)
+        elif path == "/login":
+            self._send_login()
+        else:
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", "/login")
+            self.end_headers()
+        return True
 
     def _send_json(self, obj, status=HTTPStatus.OK):
         body = json.dumps(obj).encode("utf-8")
@@ -44,6 +147,16 @@ class CourseHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if self._refuse_signed_out(path):
+            return
+        if path == "/login":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", SITE_PATH)
+            self.end_headers()
+            return
+        if os.path.normcase(self.translate_path(path)) in {os.path.normcase(str(p)) for p in PRIVATE_FILES}:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
         if path in ("/", "/index.html"):
             self.send_response(HTTPStatus.FOUND)
             self.send_header("Location", SITE_PATH)
@@ -154,12 +267,17 @@ class CourseHandler(SimpleHTTPRequestHandler):
 
     def _from_course_page(self) -> bool:
         """Accept actions only from the course page itself. Other websites can make a browser
-        send requests to localhost; they fail these checks (wrong Host or Origin, or no JSON)."""
-        host = (self.headers.get("Host") or "").split(":")[0]
-        if host not in ("localhost", "127.0.0.1"):
-            return False
+        send requests to localhost; they fail these checks (wrong Host or Origin, or no JSON).
+        On the network, the passcode cookie (SameSite=Strict) is checked before this, and the
+        Origin must match the address the page was opened at."""
+        host = self.headers.get("Host") or ""
         origin = self.headers.get("Origin")
-        if origin and origin.split("://", 1)[-1].split(":")[0] not in ("localhost", "127.0.0.1"):
+        if self.access is None:
+            if host.split(":")[0] not in LOCAL_NAMES:
+                return False
+            if origin and origin.split("://", 1)[-1].split(":")[0] not in LOCAL_NAMES:
+                return False
+        elif origin and origin.split("://", 1)[-1].rstrip("/") != host:
             return False
         return (self.headers.get("Content-Type") or "").startswith("application/json")
 
@@ -241,6 +359,11 @@ class CourseHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.split("?", 1)[0]
+        if self.access is not None and route == "/login":
+            self._login()
+            return
+        if self._refuse_signed_out(route):
+            return
         if not self._from_course_page():
             self._send_json({"error": "refused: this request did not come from the course page"}, HTTPStatus.FORBIDDEN)
             return
@@ -277,16 +400,21 @@ class CourseHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
 
-def serve(port: int = 8000, open_browser: bool = True) -> None:
+def serve(port: int = 8000, open_browser: bool = True, host: str = "127.0.0.1") -> None:
     from .reset import sync_workspace
 
     for change in sync_workspace():          # new lessons after an update: add their stubs
         print(f"  {change}")
-    handler = partial(CourseHandler, directory=str(ROOT))
-    # Bind to localhost only: this server can write progress.json.
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    on_network = host not in LOCAL_NAMES
+    handler_cls = type("Handler", (CourseHandler,), {"access": access_code() if on_network else None})
+    handler = partial(handler_cls, directory=str(ROOT))
+    httpd = ThreadingHTTPServer((host, port), handler)
     url = f"http://localhost:{port}{SITE_PATH}"
     print(f"Serving the course at {url}")
+    if on_network:
+        for name in _lan_addresses():
+            print(f"  from other devices at home: http://{name}:{port}/")
+        print(f"  passcode: {handler_cls.access}   (saved in {ACCESS_FILE.name})")
     print("Press Ctrl+C to stop.")
     if open_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
