@@ -56,6 +56,12 @@ Ollama models run very slowly on a Pi 4.
 
 To do the same on any computer by hand: `python -m course serve --host 0.0.0.0`.
 
+**From outside your home (WireGuard).** On the Pi, run `./scripts/wg_setup.sh` once. It sets up
+a WireGuard server and tells you which port to forward on your router (UDP 51820). Then add
+each device with `./scripts/wg_setup.sh add phone` (or `add laptop`): it prints a QR code for the
+WireGuard app and saves a config file for a laptop. With the tunnel on, open the course at
+`http://10.8.0.1:8000/`. The tunnel reaches only the Pi; your other traffic does not go through home.
+
 ## The AI tutor (optional)
 
 Press the chat button in the top bar to open the tutor column. Ask about the lesson you are
